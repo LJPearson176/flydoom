@@ -234,11 +234,11 @@ function selectSynapse(id) {
 
   if (CURRENT_ANATOMY_MODE === 'malecns') {
     if (provTier) {
-      provTier.textContent = 'BIOLOGICAL_RECONSTRUCTION';
+      provTier.textContent = 'SOURCE_DERIVED_FIXTURE';
       provTier.className = 'provenance-tier-tag biological';
     }
-    if (provSource) provSource.textContent = `MaleCNS_v1.0_EM (Body ID ${CURRENT_DATASET?.target_cell_id || 5813072001})`;
-    if (provRationale) provRationale.textContent = `Direct empirical EM chemical synapse measurement from Janelia MaleCNS v1.0. Nearest-skeleton projection: ${syn.dist_to_soma_um || 0} μm from root soma.`;
+    if (provSource) provSource.textContent = `MaleCNS_v1.0_EM_Fixture (Body ID ${CURRENT_DATASET?.target_cell_id || 5813072001})`;
+    if (provRationale) provRationale.textContent = `Offline source-derived fixture from Janelia MaleCNS v1.0 specifications (prototype arbor in 8 nm coordinates). Nearest-skeleton projection: ${syn.dist_to_soma_um || 0} μm from root soma.`;
   } else {
     if (provTier) {
       provTier.textContent = 'COMPUTATIONAL_HYPOTHESIS';

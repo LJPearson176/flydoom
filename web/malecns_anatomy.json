@@ -1,7 +1,7 @@
 {
   "model_status": "MALECNS_V1_0_VERIFIED_OFFLINE_FIXTURE",
   "source_mode": "verified_offline_fixture",
-  "provenance_tier": "biological_evidence",
+  "provenance_tier": "source_derived_fixture",
   "source": "MaleCNS_v1.0_EM_verified_offline_fixture",
   "doi": "10.1038/s41586-025-09276-5",
   "target_cell_id": 5813072001,

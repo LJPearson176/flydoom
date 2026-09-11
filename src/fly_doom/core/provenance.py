@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, Literal, Optional, TypeVar, cast
 ProvenanceTier = Literal[
     "biological_reconstruction",
     "biological_evidence",
+    "source_derived_fixture",
     "experimental_assumption",
     "computational_hypothesis",
     "engineering_scaffold",
@@ -23,6 +24,7 @@ ProvenanceTier = Literal[
 VALID_PROVENANCE_TIERS = {
     "biological_reconstruction",
     "biological_evidence",
+    "source_derived_fixture",
     "experimental_assumption",
     "computational_hypothesis",
     "engineering_scaffold",
@@ -32,6 +34,7 @@ VALID_PROVENANCE_TIERS = {
 class ProvenanceTierEnum(str, Enum):
     BIOLOGICAL_RECONSTRUCTION = "biological_reconstruction"
     BIOLOGICAL_EVIDENCE = "biological_evidence"
+    SOURCE_DERIVED_FIXTURE = "source_derived_fixture"
     EXPERIMENTAL_ASSUMPTION = "experimental_assumption"
     COMPUTATIONAL_HYPOTHESIS = "computational_hypothesis"
     ENGINEERING_SCAFFOLD = "engineering_scaffold"

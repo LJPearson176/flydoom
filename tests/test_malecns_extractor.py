@@ -197,4 +197,4 @@ def test_biological_authenticity_gate():
     assert auth_results["5_skeleton_representation_audit"]["representation_type"] == "idealized_prototype_arbor"
     assert auth_results["6_node_count_verification"]["node_count"] == 14
     assert auth_results["9_source_mode_recording"]["source_mode"] == "verified_offline_fixture"
-    assert auth_results["10_provenance_tier_gate"]["enforced_tier"] == "biological_evidence"
+    assert auth_results["10_provenance_tier_gate"]["enforced_tier"] == "source_derived_fixture"

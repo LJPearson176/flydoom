@@ -815,7 +815,7 @@ class MaleCNSExtractionBundle:
         }
 
         # 10. Provenance tier conditioned on source mode
-        tier = "biological_reconstruction" if self.source_mode == "live_neuprint" else "biological_evidence"
+        tier = "biological_reconstruction" if self.source_mode == "live_neuprint" else "source_derived_fixture"
         conf = 1.0 if self.source_mode == "live_neuprint" else 0.85
         results["10_provenance_tier_gate"] = {
             "status": "PASS",
@@ -908,7 +908,7 @@ class MaleCNSExtractionBundle:
         files_written["anatomy_manifest.json"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
 
         # 7. provenance.json
-        tier = "biological_reconstruction" if self.source_mode == "live_neuprint" else "biological_evidence"
+        tier = "biological_reconstruction" if self.source_mode == "live_neuprint" else "source_derived_fixture"
         conf = 1.0 if self.source_mode == "live_neuprint" else 0.85
         rationale = (
             f"Direct live MaleCNS v1.0 biological extraction for T4a Body ID {self.selected_target.body_id}"
@@ -1026,7 +1026,7 @@ class MaleCNSExtractionBundle:
             if self.source_mode == "live_neuprint"
             else "MALECNS_V1_0_VERIFIED_OFFLINE_FIXTURE"
         )
-        tier_str = "biological_reconstruction" if self.source_mode == "live_neuprint" else "biological_evidence"
+        tier_str = "biological_reconstruction" if self.source_mode == "live_neuprint" else "source_derived_fixture"
 
         return {
             "model_status": status_str,

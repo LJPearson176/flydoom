@@ -34,6 +34,14 @@ def test_provenance_valid_tiers():
     )
     assert p3.tier == "engineering_scaffold"
 
+    p4 = Provenance(
+        tier="source_derived_fixture",
+        source="MaleCNS_v1.0_prototype_fixture",
+        confidence=0.85,
+        rationale="Literature-derived prototype arbor",
+    )
+    assert p4.tier == "source_derived_fixture"
+
 
 def test_provenance_invalid_tier():
     with pytest.raises(ValueError, match="Invalid provenance tier"):

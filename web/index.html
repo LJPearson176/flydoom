@@ -84,9 +84,18 @@
         </section>
 
         <section class="panel telemetry-panel">
-          <div class="panel-heading"><span><span class="panel-index">05</span> CAUSAL TRACE</span><button class="mini-button" id="traceButton">TRACE FIRE ↗</button></div>
-          <div class="trace-chain"><div class="trace-node">DOOM TARGET<small>pixel region #421–453</small></div><span>↑</span><div class="trace-node">OMMATIDIA<small>luminance Δ +0.18</small></div><span>↑</span><div class="trace-node active-node">T4a CLUSTER<small>motion energy 0.71</small></div><span>↑</span><div class="trace-node">DNpe017<small>right bias 0.82</small></div><span>↑</span><div class="trace-node action-node">FIRE / TURN RIGHT<small>latency 24 ms</small></div></div>
-          <div class="telemetry-footer"><div><span>LATENCY</span><strong>24 ms</strong></div><div><span>SPIKES</span><strong>814</strong></div><div><span>DSI</span><strong>0.18</strong></div></div>
+          <div class="panel-heading"><span><span class="panel-index">05</span> DOOM FITNESS (DOOM-001)</span><span class="camera-chip" style="background:#284a3e;color:var(--cyan);border-color:#3c7a65;">NORTH STAR PROTOCOL</span></div>
+          <div class="env-stats" style="padding:10px 0;gap:12px;">
+            <div><span>DOOM SCORE</span><strong id="doomScoreVal" style="color:var(--cyan);">188.6</strong><em>COMPARTMENT T4</em></div>
+            <div><span>KILLS / DMG</span><strong id="doomKillsVal">0.9 / 72.5</strong><em>10 SEEDS</em></div>
+            <div><span>SURVIVAL</span><strong id="doomSurvVal">250.0</strong><em>100% STEPS</em></div>
+          </div>
+          <div class="activity-list" style="margin-top:4px;">
+            <div class="activity-row"><div><strong>Compartmental T4 (0.59 DSI)</strong><small>Active dendrite</small></div><div class="activity-track"><i style="width:66%;background:var(--cyan);"></i></div><b style="color:var(--cyan);">188.6</b></div>
+            <div class="activity-row"><div><strong>Ballistic Forward</strong><small>Pure movement</small></div><div class="activity-track"><i class="orange" style="width:66%"></i></div><b>188.5</b></div>
+            <div class="activity-row"><div><strong>Point-LIF EMD (0.13 DSI)</strong><small>Canonical point LIF</small></div><div class="activity-track"><i class="blue" style="width:9%"></i></div><b>25.9</b></div>
+          </div>
+          <div class="telemetry-footer"><div><span>METRIC PROTOCOL</span><strong>DOOM-001</strong></div><div><span>BENCHMARK SEEDS</span><strong>1001–1010</strong></div><div><span>FITNESS GAIN</span><strong style="color:var(--cyan);">+7.26×</strong></div></div>
         </section>
       </section>
 

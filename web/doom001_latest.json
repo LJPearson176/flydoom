@@ -1,0 +1,68 @@
+{
+  "benchmark": "DOOM-001",
+  "protocol_version": "1.0",
+  "timestamp": 1789163361,
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004,
+    1005,
+    1006,
+    1007,
+    1008,
+    1009,
+    1010
+  ],
+  "max_steps": 250,
+  "controllers": {
+    "RandomController": {
+      "doom_score_mean": 284.913,
+      "doom_score_sem": 59.095,
+      "survival_steps_mean": 236.3,
+      "survival_steps_sem": 13.7,
+      "kills_mean": 1.4,
+      "kills_sem": 0.371,
+      "damage_dealt_mean": 120.0,
+      "damage_dealt_sem": 23.214,
+      "distance_traveled_mean": 2.565,
+      "distance_traveled_sem": 0.165
+    },
+    "BallisticForwardController": {
+      "doom_score_mean": 188.55,
+      "doom_score_sem": 12.5,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 72.5,
+      "damage_dealt_sem": 2.5,
+      "distance_traveled_mean": 2.1,
+      "distance_traveled_sem": 0.0
+    },
+    "PointLIFMotionController": {
+      "doom_score_mean": 25.975,
+      "doom_score_sem": 0.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.0,
+      "kills_sem": 0.0,
+      "damage_dealt_mean": 0.0,
+      "damage_dealt_sem": 0.0,
+      "distance_traveled_mean": 1.95,
+      "distance_traveled_sem": 0.0
+    },
+    "CompartmentalT4Controller": {
+      "doom_score_mean": 188.625,
+      "doom_score_sem": 12.5,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 72.5,
+      "damage_dealt_sem": 2.5,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    }
+  }
+}
