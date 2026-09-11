@@ -236,9 +236,7 @@ def main() -> None:
 
     # Analytical Reichardt Control
     rc = SyntheticReichardtCorrelator(ReichardtParameters(tau_delay_ms=params.tau_syn_slow))
-    r_pref = rc.evaluate_response(velocity_px_s=64.0, direction_sign=1.0)
-    r_null = rc.evaluate_response(velocity_px_s=64.0, direction_sign=-1.0)
-    reichardt_dsi = (r_pref - r_null) / (r_pref + r_null) if (r_pref + r_null) > 0 else 0.0
+    r_pref, r_null, reichardt_dsi = rc.test_motion(velocity_px_s=64.0)
 
     # Gate 3: anatomical_directionality_gate
     # Requires Model D to produce biological adequacy DSI >= 0.40 and significant increase over Model A/B
