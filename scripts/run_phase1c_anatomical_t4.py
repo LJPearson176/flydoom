@@ -276,27 +276,47 @@ def main() -> None:
         },
     }
 
+    metrics_dict = {
+        "reichardt_control_dsi": float(round(reichardt_dsi, 4)),
+        "model_a_dsi": float(round(dsi_a, 4)),
+        "model_b_dsi": float(round(dsi_b, 4)),
+        "model_c_dsi": float(round(dsi_c, 4)),
+        "model_d_dsi": float(round(dsi_d, 4)),
+        "delta_compartmental_C_minus_B": float(round(delta_compartmental, 4)),
+        "delta_nonlinear_tree_D_minus_C": float(round(delta_nonlinear_tree, 4)),
+        "model_d_modulation_index": float(round(results[CompartmentModelType.MODEL_D.value].modulation_index, 4)),
+        "model_d_contrast_ratio": float(round(results[CompartmentModelType.MODEL_D.value].contrast_ratio, 2)),
+        "model_d_vector_strength": float(round(results[CompartmentModelType.MODEL_D.value].vector_strength, 4)),
+        "model_d_peak_response": float(round(results[CompartmentModelType.MODEL_D.value].peak_response, 2)),
+        "model_d_baseline_response": float(round(results[CompartmentModelType.MODEL_D.value].baseline_response, 2)),
+    }
+    for m_val, res in results.items():
+        metrics_dict[f"{m_val}_curve"] = [round(c, 1) for c in curves[m_val]]
+
     bundle = ExperimentBundle(
         run_id=run_id,
         experiment_name="Phase1C_MaleCNS_Anatomical_T4_Reconstruction",
         config=config,
+        provenance_registry=reg,
+        dataset_fingerprint=graph.compute_fingerprint(),
+        metrics=metrics_dict,
     )
 
-    bundle.register_gate(
+    bundle.add_gate(
         name="malecns_subgraph_integrity_gate",
         passed=integrity_pass,
         observed_value=f"Total_synapses={recon.total_synapses}, Partners={list(actual_partners)}",
         threshold="110 synapses across Mi1, Tm3, Mi4, Mi9",
         rationale="Single-unit T4a reconstruction preserves partner counts and cell identity from MaleCNS EM",
     )
-    bundle.register_gate(
+    bundle.add_gate(
         name="anatomical_spatial_segregation_gate",
         passed=segregation_pass,
         observed_value=f"x_lead={x_lead:.2f}, x_cent={x_cent:.2f}, x_trail={x_trail:.2f}",
         threshold="x_lead < x_cent < x_trail with separation > 5 um",
         rationale="Presynaptic partner synapses occupy distinct spatial regions along the dendritic tree",
     )
-    bundle.register_gate(
+    bundle.add_gate(
         name="anatomical_directionality_gate",
         passed=directionality_pass,
         observed_value=f"Model_D_DSI={dsi_d:.4f}, Delta_over_A={dsi_d - dsi_a:+.4f}",
@@ -304,31 +324,8 @@ def main() -> None:
         rationale="Active dendritic compartmentalization bridges the gap toward biological direction selectivity",
     )
 
-    # Metrics
-    bundle.record_metric("reichardt_control_dsi", float(round(reichardt_dsi, 4)))
-    bundle.record_metric("model_a_dsi", float(round(dsi_a, 4)))
-    bundle.record_metric("model_b_dsi", float(round(dsi_b, 4)))
-    bundle.record_metric("model_c_dsi", float(round(dsi_c, 4)))
-    bundle.record_metric("model_d_dsi", float(round(dsi_d, 4)))
-    bundle.record_metric("delta_compartmental_C_minus_B", float(round(delta_compartmental, 4)))
-    bundle.record_metric("delta_nonlinear_tree_D_minus_C", float(round(delta_nonlinear_tree, 4)))
-    bundle.record_metric("model_d_modulation_index", float(round(results[CompartmentModelType.MODEL_D.value].modulation_index, 4)))
-    bundle.record_metric("model_d_contrast_ratio", float(round(results[CompartmentModelType.MODEL_D.value].contrast_ratio, 2)))
-    bundle.record_metric("model_d_vector_strength", float(round(results[CompartmentModelType.MODEL_D.value].vector_strength, 4)))
-    bundle.record_metric("model_d_peak_response", float(round(results[CompartmentModelType.MODEL_D.value].peak_response, 2)))
-    bundle.record_metric("model_d_baseline_response", float(round(results[CompartmentModelType.MODEL_D.value].baseline_response, 2)))
-
-    for m_val, res in results.items():
-        bundle.record_metric(f"{m_val}_curve", [round(c, 1) for c in curves[m_val]])
-
-    output_dir = Path("runs") / run_id
-    bundle.seal(
-        output_dir=output_dir,
-        provenance_registry=reg,
-        connectome_fingerprint=graph.compute_fingerprint(),
-    )
-
-    print(f"\nSealed Phase 1C Experiment Bundle: {output_dir.absolute()}")
+    bundle_dir = bundle.save(Path("runs"))
+    print(f"\nSealed Phase 1C Experiment Bundle: {bundle_dir.absolute()}")
 
 
 if __name__ == "__main__":
