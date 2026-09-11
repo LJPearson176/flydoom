@@ -111,11 +111,7 @@ class ProvenanceRegistry:
         self.entries[component_name] = provenance
 
     def audit_tier_counts(self) -> Dict[str, int]:
-        counts = {
-            "biological_reconstruction": 0,
-            "computational_hypothesis": 0,
-            "engineering_scaffold": 0,
-        }
+        counts = {tier: 0 for tier in VALID_PROVENANCE_TIERS}
         for entry in self.entries.values():
             counts[entry.tier] += 1
         return counts
