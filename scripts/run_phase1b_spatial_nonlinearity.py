@@ -300,6 +300,8 @@ def main() -> None:
             res = {
                 "t4a_mean_dsi": round(t4a_sum.mean_dsi, 4),
                 "t4a_median_dsi": round(t4a_sum.median_dsi, 4),
+                "t4a_vector_strength": round(t4a_sum.mean_vector_strength, 4),
+                "t4a_fraction_pd_reliable": round(t4a_sum.fraction_pd_reliable, 4),
                 "t4a_circ_var": round(t4a_sum.mean_circular_variance, 4),
                 "t4a_card_err": round(t4a_sum.mean_cardinal_error_deg, 2),
                 "t4a_peak": round(t4a_sum.mean_peak_response, 2),
@@ -307,10 +309,12 @@ def main() -> None:
                 "t4a_variance": round(t4a_sum.mean_trial_variance, 2),
                 "t4a_latency_ms": round(t4a_sum.mean_latency_ms, 2) if t4a_sum.mean_latency_ms else None,
                 "hs_r_dsi": round(hs_r.dsi, 4),
-                "hs_r_pd": round(hs_r.preferred_direction_deg, 1),
+                "hs_r_pd": round(hs_r.preferred_direction_deg, 1) if hs_r.preferred_direction_deg is not None else None,
+                "hs_r_vector_strength": round(hs_r.vector_strength, 4),
+                "hs_r_pd_reliable": hs_r.vector_pd_reliable,
             }
             surface_results[(n_col, gamma)] = res
-            print(f" -> T4a DSI={t4a_sum.mean_dsi:.3f} | HS DSI={hs_r.dsi:.3f}")
+            print(f" -> T4a Discrete DSI={t4a_sum.mean_dsi:.3f}, V_Strength={t4a_sum.mean_vector_strength:.3f}, Reliable={t4a_sum.fraction_pd_reliable*100:.0f}% | HS DSI={hs_r.dsi:.3f}")
 
             if gamma == 0.0:
                 primary_2x4[f"A{n_col}"] = round(t4a_sum.mean_dsi, 4)
