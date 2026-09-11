@@ -235,7 +235,7 @@ def main() -> None:
         print(f"  {label:38s}: DSI={tuning.dsi:.4f}, Peak={tuning.peak_response:5.1f}, Base={tuning.baseline_response:5.1f}, MI={tuning.modulation_index:.4f}, Vector Strength={tuning.vector_strength:.4f}")
 
     # Analytical Reichardt Control
-    rc = SyntheticReichardtCorrelator(ReichardtParameters(tau_slow=params.tau_syn_slow, delay_ms=params.tm3_delay_ms))
+    rc = SyntheticReichardtCorrelator(ReichardtParameters(tau_delay_ms=params.tau_syn_slow))
     r_pref = rc.evaluate_response(velocity_px_s=64.0, direction_sign=1.0)
     r_null = rc.evaluate_response(velocity_px_s=64.0, direction_sign=-1.0)
     reichardt_dsi = (r_pref - r_null) / (r_pref + r_null) if (r_pref + r_null) > 0 else 0.0
