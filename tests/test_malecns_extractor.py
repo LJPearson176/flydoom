@@ -158,5 +158,43 @@ def test_discovery_gate_and_canonical_fixtures(tmp_path):
     assert "anatomy_manifest.json" in files
     assert "provenance.json" in files
     assert "fingerprints.json" in files
+    assert "authenticity_gate.json" in files
     if "synapses.parquet" in files:
         assert (tmp_path / "synapses.parquet").exists()
+
+
+def test_biological_authenticity_gate():
+    from fly_doom.connectome.malecns_extractor import (
+        MaleCNSDiscoveryGate,
+        MaleCNSExtractionBundle,
+        create_canonical_malecns_fixtures,
+        derive_synapse_epistemic_triad,
+    )
+
+    candidates, skeleton, synapses = create_canonical_malecns_fixtures()
+    gate = MaleCNSDiscoveryGate()
+    target, rationale = gate.select_canonical_target(candidates)
+    annotated = [derive_synapse_epistemic_triad(s, skeleton) for s in synapses]
+
+    # Initialize bundle in explicit verified_offline_fixture mode
+    bundle = MaleCNSExtractionBundle(
+        query_spec=gate.generate_query_spec(),
+        candidates=candidates,
+        selected_target=target,
+        selection_rationale=rationale,
+        skeleton=skeleton,
+        synapses=annotated,
+        source_mode="verified_offline_fixture",
+    )
+
+    auth_results = bundle.validate_biological_authenticity()
+    assert len(auth_results) == 10
+    for gate_key, gate_eval in auth_results.items():
+        assert gate_eval["status"] == "PASS", f"Gate {gate_key} failed: {gate_eval}"
+
+    # Verify that prototype arbor is explicitly flagged
+    assert auth_results["5_skeleton_representation_audit"]["is_prototype"] is True
+    assert auth_results["5_skeleton_representation_audit"]["representation_type"] == "idealized_prototype_arbor"
+    assert auth_results["6_node_count_verification"]["node_count"] == 14
+    assert auth_results["9_source_mode_recording"]["source_mode"] == "verified_offline_fixture"
+    assert auth_results["10_provenance_tier_gate"]["enforced_tier"] == "biological_evidence"

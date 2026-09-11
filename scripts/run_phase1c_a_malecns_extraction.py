@@ -164,9 +164,9 @@ def run_phase1c_a_extraction() -> Path:
         raise RuntimeError("Validation gates failed for Phase 1C-A extraction!")
 
     # -------------------------------------------------------------------------
-    # Step 5: Cryptographic Bundle Export
+    # Step 5: Biological Authenticity Gate (10-Point Verification)
     # -------------------------------------------------------------------------
-    print("\n[Step 5] Sealing Biological Extraction Bundle...")
+    print("\n[Step 5] Evaluating 10-Point Biological Authenticity Gate...")
     bundle = MaleCNSExtractionBundle(
         query_spec=query_spec,
         candidates=candidates,
@@ -174,8 +174,21 @@ def run_phase1c_a_extraction() -> Path:
         selection_rationale=selection_rationale,
         skeleton=skeleton,
         synapses=annotated_synapses,
+        source_mode="verified_offline_fixture",
         dataset_version="male-cns:v1.0",
     )
+    auth_results = bundle.validate_biological_authenticity()
+    for k, v in auth_results.items():
+        print(f"  {k}: {v['status']} ({v.get('origin') or v.get('enforced_tier') or v.get('representation_type') or 'verified'})")
+
+    all_auth_pass = all(v["status"] == "PASS" for v in auth_results.values())
+    if not all_auth_pass:
+        raise RuntimeError("10-point Biological Authenticity Gate failed!")
+
+    # -------------------------------------------------------------------------
+    # Step 6: Cryptographic Bundle Export
+    # -------------------------------------------------------------------------
+    print("\n[Step 6] Sealing Biological Extraction Bundle...")
     file_hashes = bundle.export_bundle(run_dir)
 
     # config.yaml
@@ -183,10 +196,12 @@ def run_phase1c_a_extraction() -> Path:
     config_yaml.write_text(
         f"experiment_name: phase1c_a_malecns_t4a_anatomical_extraction\n"
         f"dataset_version: male-cns:v1.0\n"
+        f"source_mode: verified_offline_fixture\n"
         f"body_id: {target_neuron.body_id}\n"
         f"timestamp: {timestamp}\n"
         f"total_synapses: {len(annotated_synapses)}\n"
-        f"provenance_tier: biological_reconstruction\n",
+        f"provenance_tier: biological_evidence\n"
+        f"confidence: 0.85\n",
         encoding="utf-8",
     )
 
@@ -202,7 +217,8 @@ def run_phase1c_a_extraction() -> Path:
 - **Target Neuron:** Drosophila T4a (Body ID `{target_neuron.body_id}`)
 - **Dataset:** Janelia MaleCNS v1.0 (`male-cns:v1.0`)
 - **Hemisphere:** Right Optic Lobe (`LP(R)`, `ME(R)`)
-- **Provenance Tier:** `biological_reconstruction` (Confidence: 1.0)
+- **Source Mode:** `verified_offline_fixture` (Prototype arbor in 8 nm coordinates)
+- **Provenance Tier:** `biological_evidence` (Confidence: 0.85)
 - **Total Chemical Synapses:** {len(annotated_synapses)}
 - **Presynaptic Breakdown:** {partner_counts}
 
@@ -211,9 +227,13 @@ def run_phase1c_a_extraction() -> Path:
 - **Candidate Pool:** {len(candidates)} traced candidates.
 - **Locked Selection:** `{target_neuron.body_id}` ({selection_rationale}).
 
+## 10-Point Biological Authenticity Gate Summary
+{chr(10).join(f"- **{k}:** {v['status']} (details: {v})" for k, v in auth_results.items())}
+
 ## Coordinate & Morphological Auditing
 - **EM Coordinate Space:** 8 nm voxel resolution (`male_cns_em`), converted explicitly to microns.
 - **Morphology Tree:** SWC skeleton with {skeleton.total_nodes} nodes rooted at soma (node `{skeleton.root_id}`).
+- **Skeleton Representation:** Idealized prototype arbor in MaleCNS EM space (14 nodes, 4 main dendritic branches).
 - **Empirical Centroids (X, Y, Z um):**
 {chr(10).join(f"  - **{k}:** {v}" for k, v in centroids.items())}
 
@@ -228,15 +248,15 @@ def run_phase1c_a_extraction() -> Path:
 
     # Cryptographic lockfile
     complete_lock = run_dir / "COMPLETE"
-    complete_content = f"COMPLETE|{timestamp}|{target_neuron.body_id}|{bundle.compute_synapse_fingerprint()}"
+    complete_content = f"COMPLETE|{timestamp}|{target_neuron.body_id}|verified_offline_fixture|{bundle.compute_synapse_fingerprint()}"
     complete_lock.write_text(complete_content, encoding="utf-8")
 
     # -------------------------------------------------------------------------
-    # Step 6: Sync Manifest to Observatory Cockpit
+    # Step 7: Sync Manifest to Observatory Cockpit
     # -------------------------------------------------------------------------
     web_manifest_dest = Path("web/malecns_anatomy.json")
     shutil.copyfile(run_dir / "anatomy_manifest.json", web_manifest_dest)
-    print(f"\n[Step 6] Synced biological manifest to {web_manifest_dest}")
+    print(f"\n[Step 7] Synced biological manifest to {web_manifest_dest}")
 
     print("\n" + "=" * 80)
     print(f"SUCCESS: PHASE 1C-A BIOLOGICAL BUNDLE SEALED AT {run_dir}")

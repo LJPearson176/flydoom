@@ -83,8 +83,8 @@ function updateBannerAndInspector(mode, data) {
   const partnerBadge = document.querySelector('#partnerCountBadge');
 
   if (isBio) {
-    if (title) title.textContent = 'MALECNS v1.0 BIOLOGICAL RECONSTRUCTION';
-    if (desc) desc.textContent = `Authentic EM connectome extraction for Drosophila T4a Body ID ${data.target_cell_id}. ${data.total_synapses} chemical synapses, 5 partner classes, 8 nm EM coordinates.`;
+    if (title) title.textContent = 'MALECNS v1.0 — VERIFIED OFFLINE FIXTURE';
+    if (desc) desc.textContent = `Offline fixture for Drosophila T4a Body ID ${data.target_cell_id}. ${data.total_synapses} synapses, 5 partner classes, prototype arbor in 8 nm EM coordinates. Source Mode: ${data.source_mode}.`;
     if (statusDot) {
       statusDot.style.background = 'var(--cyan)';
       statusDot.style.boxShadow = '0 0 10px var(--cyan)';

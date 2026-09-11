@@ -1,7 +1,8 @@
 {
-  "model_status": "MALECNS_V1_0_BIOLOGICAL_RECONSTRUCTION",
-  "provenance_tier": "biological_reconstruction",
-  "source": "MaleCNS_v1.0_EM_Janelia",
+  "model_status": "MALECNS_V1_0_VERIFIED_OFFLINE_FIXTURE",
+  "source_mode": "verified_offline_fixture",
+  "provenance_tier": "biological_evidence",
+  "source": "MaleCNS_v1.0_EM_verified_offline_fixture",
   "doi": "10.1038/s41586-025-09276-5",
   "target_cell_id": 5813072001,
   "target_cell_type": "T4a",
@@ -18,6 +19,7 @@
   "selection_rationale": "Selected Body ID 5813072001: Type T4a, Hemisphere R, ROIs ['LP(R)', 'ME(R)', 'LO(R)'], post-synaptic contact count 138 (highest among 3 candidates meeting criteria).",
   "synapse_fingerprint_sha256": "117be41366eeac00066e39922c3e83e387a7109179368907eecd54b47f50458a",
   "skeleton_fingerprint_sha256": "54ab6edb9e2c67e0e7ef8d5e9507f6e23ab53606b64fda24a321a0994d9cfa08",
+  "skeleton_type": "idealized_prototype_arbor",
   "skeleton_branches": [
     {
       "node_id": 2,
