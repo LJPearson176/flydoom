@@ -109,3 +109,23 @@ class VizDoomEnvironment:
     def close(self) -> None:
         if self._has_native and self.game is not None:
             self.game.close()
+
+    @staticmethod
+    def check_vizdoom_available() -> Dict[str, Any]:
+        """Check if native ViZDoom is importable and functional on host."""
+        try:
+            import vizdoom as vzd
+            version = getattr(vzd, "__version__", "unknown")
+            return {
+                "available": True,
+                "version": version,
+                "status": "NATIVE_VIZDOOM_READY",
+            }
+        except ImportError as e:
+            return {
+                "available": False,
+                "version": None,
+                "error": str(e),
+                "status": "NOT_INSTALLED",
+                "recommendation": "Install via 'uv add vizdoom' or platform wheel when native build tools are present.",
+            }

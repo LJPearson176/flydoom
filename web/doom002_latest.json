@@ -1,0 +1,141 @@
+{
+  "benchmark": "DOOM-002-MOCK",
+  "benchmark_type": "controlled_neural_ablation",
+  "protocol_version": "2.0",
+  "timestamp": 1789164066,
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004,
+    1005,
+    1006,
+    1007,
+    1008,
+    1009,
+    1010
+  ],
+  "max_steps": 250,
+  "controllers": {
+    "RandomController": {
+      "flydoom_fitness_score_mean": 284.913,
+      "flydoom_fitness_score_sem": 59.095,
+      "survival_steps_mean": 236.3,
+      "survival_steps_sem": 13.7,
+      "kills_mean": 1.4,
+      "kills_sem": 0.371,
+      "damage_dealt_mean": 120.0,
+      "damage_dealt_sem": 23.214,
+      "distance_traveled_mean": 2.565,
+      "distance_traveled_sem": 0.165
+    },
+    "BallisticForwardController": {
+      "flydoom_fitness_score_mean": 188.55,
+      "flydoom_fitness_score_sem": 12.5,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 72.5,
+      "damage_dealt_sem": 2.5,
+      "distance_traveled_mean": 2.1,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelA_PointLIF": {
+      "flydoom_fitness_score_mean": 201.125,
+      "flydoom_fitness_score_sem": 0.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 1.0,
+      "kills_sem": 0.0,
+      "damage_dealt_mean": 75.0,
+      "damage_dealt_sem": 0.0,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelB_TemporalPointLIF": {
+      "flydoom_fitness_score_mean": 226.8,
+      "flydoom_fitness_score_sem": 0.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 1.0,
+      "kills_sem": 0.0,
+      "damage_dealt_mean": 100.0,
+      "damage_dealt_sem": 0.0,
+      "distance_traveled_mean": 3.6,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelC_PassiveTree": {
+      "flydoom_fitness_score_mean": 202.782,
+      "flydoom_fitness_score_sem": 27.244,
+      "survival_steps_mean": 246.7,
+      "survival_steps_sem": 3.3,
+      "kills_mean": 0.8,
+      "kills_sem": 0.133,
+      "damage_dealt_mean": 95.0,
+      "damage_dealt_sem": 14.337,
+      "distance_traveled_mean": 6.225,
+      "distance_traveled_sem": 1.148
+    },
+    "ModelD_ActiveTree": {
+      "flydoom_fitness_score_mean": 186.125,
+      "flydoom_fitness_score_sem": 15.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 70.0,
+      "damage_dealt_sem": 5.0,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelD_Mi4_KO": {
+      "flydoom_fitness_score_mean": 26.125,
+      "flydoom_fitness_score_sem": 0.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.0,
+      "kills_sem": 0.0,
+      "damage_dealt_mean": 0.0,
+      "damage_dealt_sem": 0.0,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelD_Mi9_KO": {
+      "flydoom_fitness_score_mean": 186.125,
+      "flydoom_fitness_score_sem": 15.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 70.0,
+      "damage_dealt_sem": 5.0,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelD_Tm3_KO": {
+      "flydoom_fitness_score_mean": 186.05,
+      "flydoom_fitness_score_sem": 15.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 70.0,
+      "damage_dealt_sem": 5.0,
+      "distance_traveled_mean": 2.1,
+      "distance_traveled_sem": 0.0
+    },
+    "ModelD_Mi1_KO": {
+      "flydoom_fitness_score_mean": 186.125,
+      "flydoom_fitness_score_sem": 15.0,
+      "survival_steps_mean": 250.0,
+      "survival_steps_sem": 0.0,
+      "kills_mean": 0.9,
+      "kills_sem": 0.1,
+      "damage_dealt_mean": 70.0,
+      "damage_dealt_sem": 5.0,
+      "distance_traveled_mean": 2.25,
+      "distance_traveled_sem": 0.0
+    }
+  }
+}

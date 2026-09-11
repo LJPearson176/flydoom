@@ -49,6 +49,12 @@ class MockDoomArena:
         self.fov_rad = math.radians(fov_deg)
         self.max_steps = max_steps
         self.num_imps_init = num_imps
+        self.provenance = Provenance(
+            tier="engineering_scaffold",
+            source="MockDoomArena_Raycaster_v1.0",
+            confidence=0.80,
+            rationale="Pure-Python/NumPy 2.5D perspective raycaster arena providing deterministic visual stimulus and combat mechanics for CI and headless testing",
+        )
 
         # E1M1 Arena Grid: 0 = floor, 1 = tech wall, 2 = stone wall, 3 = exit gate
         self.map_grid = np.array([

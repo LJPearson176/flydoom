@@ -3,7 +3,13 @@
 from fly_doom.doom.interface import DoomAction, DoomEnvironment, DoomObservation
 from fly_doom.doom.mock_arena import MockDoomArena
 from fly_doom.doom.vizdoom_wrapper import VizDoomEnvironment
-from fly_doom.doom.benchmark import Doom001Benchmark, EpisodeResult, BenchmarkSummary
+from fly_doom.doom.benchmark import (
+    Doom001Benchmark,
+    Doom002Benchmark,
+    EpisodeResult,
+    BenchmarkSummary,
+    TrajectoryTick,
+)
 
 __all__ = [
     "DoomAction",
@@ -12,6 +18,8 @@ __all__ = [
     "MockDoomArena",
     "VizDoomEnvironment",
     "Doom001Benchmark",
+    "Doom002Benchmark",
     "EpisodeResult",
     "BenchmarkSummary",
+    "TrajectoryTick",
 ]
