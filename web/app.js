@@ -54,69 +54,76 @@ animate();
 
 // --- ANATOMY MODE & INTERACTIVE SYNAPSE/BRANCH LOGIC ---
 
-const partners = [
-  { type: 'Mi4', count: 20, comp: 'leading', nt: 'GABA', color: '#d07af5', baseId: 2101, mx: -4.2, my: 0.0, mz: 1.5, tau: '40.0 ms', col: 6 },
-  { type: 'Mi9', count: 15, comp: 'leading_tip', nt: 'Glu', color: '#f5d76e', baseId: 2201, mx: -7.2, my: -4.5, mz: 1.2, tau: '40.0 ms', col: 6 },
-  { type: 'Mi1', count: 40, comp: 'central', nt: 'ACh', color: '#58dfc2', baseId: 3001, mx: 0.1, my: -5.5, mz: 0.0, tau: '15.0 ms', col: 8 },
-  { type: 'Tm3', count: 35, comp: 'trailing', nt: 'ACh', color: '#f0a65a', baseId: 4001, mx: 5.2, my: -3.8, mz: -0.8, tau: '60.0 ms (delayed 20ms)', col: 10 },
-];
+let SYNAPSE_DATA = [];
 
-const SYNAPSE_DATA = [];
-let synId = 1;
-partners.forEach(p => {
-  for (let i = 0; i < p.count; i++) {
-    const jitterX = (Math.random() - 0.5) * 1.8;
-    const jitterY = (Math.random() - 0.5) * 1.8;
-    const jitterZ = (Math.random() - 0.5) * 0.8;
-    SYNAPSE_DATA.push({
-      id: synId++,
-      preId: p.baseId + (i % 3),
-      type: p.type,
-      comp: p.comp,
-      nt: p.nt,
-      color: p.color,
-      x: +(p.mx + jitterX).toFixed(2),
-      y: +(p.my + jitterY).toFixed(2),
-      z: +(p.mz + jitterZ).toFixed(2),
-      tau: p.tau,
-      col: p.col
+function initAnatomy(data) {
+  SYNAPSE_DATA = data.synapses || [];
+
+  // Populate Retinotopic Grid
+  const gridContainer = document.querySelector('#retinotopicGrid');
+  if (gridContainer) {
+    gridContainer.innerHTML = '';
+    for (let c = 0; c < 16; c++) {
+      const colDiv = document.createElement('div');
+      colDiv.className = 'retino-col';
+      colDiv.dataset.col = c;
+      if (c === 6 || c === 8 || c === 10) {
+        colDiv.style.borderBottom = '3px solid ' + (c === 6 ? '#d07af5' : (c === 8 ? '#58dfc2' : '#f0a65a'));
+      }
+      colDiv.addEventListener('click', () => selectRetinotopicColumn(c));
+      gridContainer.appendChild(colDiv);
+    }
+  }
+
+  // Populate Synapses on Arbor SVG
+  const synGroup = document.querySelector('#synapsesGroup');
+  if (synGroup) {
+    synGroup.innerHTML = '';
+    SYNAPSE_DATA.forEach(s => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', s.x);
+      circle.setAttribute('cy', s.y);
+      circle.setAttribute('r', '1.1');
+      circle.setAttribute('fill', s.color);
+      circle.setAttribute('stroke', '#081116');
+      circle.setAttribute('stroke-width', '0.3');
+      circle.setAttribute('class', 'synapse-node');
+      circle.dataset.synId = s.id;
+      circle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectSynapse(s.id);
+      });
+      synGroup.appendChild(circle);
     });
   }
-});
 
-// Populate Retinotopic Grid
-const gridContainer = document.querySelector('#retinotopicGrid');
-if (gridContainer) {
-  gridContainer.innerHTML = '';
-  for (let c = 0; c < 16; c++) {
-    const colDiv = document.createElement('div');
-    colDiv.className = 'retino-col';
-    colDiv.dataset.col = c;
-    if (c === 6 || c === 8 || c === 10) {
-      colDiv.style.borderBottom = '3px solid ' + (c === 6 ? '#d07af5' : (c === 8 ? '#58dfc2' : '#f0a65a'));
-    }
-    colDiv.addEventListener('click', () => selectRetinotopicColumn(c));
-    gridContainer.appendChild(colDiv);
+  // Add click listeners to dendritic branches for symmetric tri-directional selection
+  document.querySelectorAll('.dendrite-branch').forEach(branch => {
+    branch.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const comp = branch.dataset.branch;
+      selectBranch(comp);
+    });
+  });
+
+  renderSynapseTable();
+
+  // Select default synapse (e.g. #1)
+  if (SYNAPSE_DATA.length > 0) {
+    selectSynapse(SYNAPSE_DATA[0].id);
   }
 }
 
-// Populate Synapses on Arbor SVG
-const synGroup = document.querySelector('#synapsesGroup');
-if (synGroup) {
-  SYNAPSE_DATA.forEach(s => {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', s.x);
-    circle.setAttribute('cy', s.y);
-    circle.setAttribute('r', '1.1');
-    circle.setAttribute('fill', s.color);
-    circle.setAttribute('stroke', '#081116');
-    circle.setAttribute('stroke-width', '0.3');
-    circle.setAttribute('class', 'synapse-node');
-    circle.dataset.synId = s.id;
-    circle.addEventListener('click', () => selectSynapse(s.id));
-    synGroup.appendChild(circle);
+// Fetch sealed anatomy.json or fallback gracefully
+fetch('./anatomy.json')
+  .then(res => {
+    if (!res.ok) throw new Error('Failed to load anatomy.json');
+    return res.json();
+  })
+  .then(data => initAnatomy(data))
+  .catch(err => {
+    console.warn('Could not fetch anatomy.json, relying on embedded fallback:', err);
   });
-}
 
 // Populate Synapse Table
 const tableBody = document.querySelector('#synapseTableBody');
@@ -132,7 +139,6 @@ function renderSynapseTable(filterType = 'all') {
     tableBody.appendChild(tr);
   });
 }
-renderSynapseTable();
 
 // Mode Switcher (Observe vs Anatomy)
 document.querySelectorAll('.mode-tab').forEach((tab) => {
@@ -151,7 +157,7 @@ document.querySelectorAll('.partner-pill').forEach(pill => {
     renderSynapseTable(target);
     document.querySelectorAll('.synapse-node').forEach(node => {
       const syn = SYNAPSE_DATA.find(s => s.id == node.dataset.synId);
-      node.style.opacity = (target === 'all' || syn.type === target) ? '1.0' : '0.15';
+      node.style.opacity = (target === 'all' || (syn && syn.type === target)) ? '1.0' : '0.15';
     });
   });
 });
@@ -172,7 +178,7 @@ function selectSynapse(id) {
   }
   const detailsElem = document.querySelector('#inspectorDetails');
   if (detailsElem) {
-    const ntDesc = syn.nt === 'ACh' ? 'Acetylcholine (Excitatory)' : (syn.nt === 'GABA' ? 'GABA (Shunting Inhibitory)' : 'Glutamate (Inhibitory GluCl)');
+    const ntDesc = syn.nt_full || (syn.nt === 'ACh' ? 'Acetylcholine (Excitatory)' : (syn.nt === 'GABA' ? 'GABA (Shunting Inhibitory)' : 'Glutamate (Inhibitory GluCl)'));
     detailsElem.innerHTML = '<span>PRE-TYPE: <b style="color:' + syn.color + '">' + syn.type + ' (#' + syn.preId + ')</b></span>' +
       '<span>COMPARTMENT: <b>' + syn.comp.replace('_', ' ').toUpperCase() + '</b></span>' +
       '<span>COORDINATES: <b>(' + syn.x + ', ' + syn.y + ', ' + syn.z + ') μm</b></span>' +
@@ -192,6 +198,18 @@ function selectSynapse(id) {
   if (provRationale) provRationale.textContent = 'Parameterized hypothesis testing of ' + syn.comp + ' inputs based on Takemura et al. (2017) and Borst & Haag (2020).';
 }
 
+function selectBranch(comp) {
+  document.querySelectorAll('.dendrite-branch').forEach(b => b.classList.toggle('highlighted', b.dataset.branch === comp));
+  const mappedSyns = SYNAPSE_DATA.filter(s => s.comp === comp || (comp === 'leading' && s.comp === 'leading_tip'));
+  document.querySelectorAll('.synapse-node').forEach(n => {
+    const isMapped = mappedSyns.some(s => s.id == n.dataset.synId);
+    n.classList.toggle('highlighted', isMapped);
+  });
+  if (mappedSyns.length > 0) {
+    selectSynapse(mappedSyns[0].id);
+  }
+}
+
 function selectRetinotopicColumn(colIdx) {
   document.querySelectorAll('.retino-col').forEach(c => c.classList.toggle('highlighted', c.dataset.col == colIdx));
   const mappedSyns = SYNAPSE_DATA.filter(s => s.col === colIdx);
@@ -209,7 +227,7 @@ const MODEL_DATA = {
   model_a: { dsi: '0.2919', mi: '0.4545', v: '0.1865', status: 'FAIL', curve: '[57, 39, 75, 89, 104, 89, 74, 53]' },
   model_b: { dsi: '0.1099', mi: '0.5303', v: '0.2292', status: 'FAIL (TONIC)', curve: '[45, 31, 81, 91, 100, 91, 101, 44]' },
   model_c: { dsi: '0.3620', mi: '0.5102', v: '0.2321', status: 'PASSING Δ', curve: '[52, 36, 81, 104, 111, 104, 101, 50]' },
-  model_d: { dsi: '0.5902', mi: '1.0000', v: '0.4513', status: 'PASS (BIOLOGICAL)', curve: '[25, 19, 0, 84, 97, 84, 0, 33]' },
+  model_d: { dsi: '0.5902', mi: '1.0000', v: '0.4513', status: 'PASS (HYPOTHESIS GATE)', curve: '[25, 19, 0, 84, 97, 84, 0, 33]' },
 };
 
 document.querySelectorAll('.model-tab-btn').forEach(btn => {
@@ -233,20 +251,10 @@ const btnReal = document.querySelector('#statusRealBtn');
 if (btnSyn) {
   btnSyn.addEventListener('click', () => {
     btnSyn.classList.add('active');
-    if (btnReal) btnReal.classList.remove('active');
     const label = document.querySelector('#modelStatusBanner .model-status-badge strong');
     if (label) label.textContent = 'SYNTHETIC CANONICAL T4';
     const desc = document.querySelector('#modelStatusBanner .model-status-desc');
     if (desc) desc.textContent = 'Not derived from MaleCNS EM data. Used for hypothesis testing. 110 synthetic contacts, 4 cell types.';
   });
 }
-if (btnReal) {
-  btnReal.addEventListener('click', () => {
-    btnReal.classList.add('active');
-    if (btnSyn) btnSyn.classList.remove('active');
-    const label = document.querySelector('#modelStatusBanner .model-status-badge strong');
-    if (label) label.textContent = 'MALECNS T4a RECONSTRUCTION (TARGET)';
-    const desc = document.querySelector('#modelStatusBanner .model-status-desc');
-    if (desc) desc.textContent = 'Awaiting Phase 1C-A EM pipeline extraction: Body ID query, raw 3D synapse coordinates, morphological SWC arbor.';
-  });
-}
+

@@ -14,7 +14,8 @@ def test_real_em_synapse_coordinates():
         x_nm=125400.0,
         y_nm=84200.0,
         z_nm=45100.0,
-        confidence=0.98,
+        synapse_confidence=0.98,
+        partner_classification_confidence=1.0,
         neuprint_roi="ME(R)",
     )
 
@@ -33,7 +34,8 @@ def test_malecns_extraction_provenance():
         x_nm=125400.0,
         y_nm=84200.0,
         z_nm=45100.0,
-        confidence=0.98,
+        synapse_confidence=0.98,
+        partner_classification_confidence=0.95,
         neuprint_roi="ME(R)",
     )
 
@@ -47,5 +49,10 @@ def test_malecns_extraction_provenance():
 
     assert extraction.provenance.tier == "biological_reconstruction"
     assert extraction.provenance.confidence == 1.0
+    assert extraction.average_synapse_confidence == 0.98
+    assert extraction.average_classification_confidence == 0.95
+    centroids = extraction.compute_spatial_centroids()
+    assert "Mi1" in centroids
+    assert centroids["Mi1"] == (125.4, 84.2, 45.1)
     fp = extraction.compute_fingerprint()
     assert len(fp) == 64
