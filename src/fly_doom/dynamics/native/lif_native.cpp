@@ -33,6 +33,15 @@ struct LIFNativeEngine {
     std::vector<std::vector<double>> delay_buffer;
     uint32_t ring_idx;
 
+    // Model E: Minimal nonlinear coincidence integration
+    double coincidence_gamma;
+    std::vector<uint8_t> nonlinear_mask;
+    bool has_nonlinearity;
+
+    // Synaptic branch currents for nonlinear neurons: [neuron_idx][incoming_edge_slot]
+    // To handle up to 4 converging inputs per nonlinear neuron
+    std::vector<std::vector<double>> branch_i_syn;
+
     LIFNativeEngine(
         uint32_t n_neurons,
         uint32_t n_edges,
@@ -41,7 +50,9 @@ struct LIFNativeEngine {
         const double* w,
         const NativeLIFParams* p,
         const double* tau_syn_per_neuron = nullptr,
-        const uint32_t* delays = nullptr
+        const uint32_t* delays = nullptr,
+        double gamma = 0.0,
+        const uint8_t* mask = nullptr
     ) : num_neurons(n_neurons),
         num_edges(n_edges),
         params(*p),
@@ -54,7 +65,9 @@ struct LIFNativeEngine {
         i_syn(n_neurons, 0.0),
         refractory_timer(n_neurons, 0),
         delay_buffer(MAX_DELAY_STEPS, std::vector<double>(n_neurons, 0.0)),
-        ring_idx(0)
+        ring_idx(0),
+        coincidence_gamma(gamma),
+        has_nonlinearity(gamma > 0.0 && mask != nullptr)
     {
         alpha_m = std::exp(-params.dt / params.tau_m);
         refractory_steps = static_cast<int32_t>(std::round(params.t_ref / params.dt));
@@ -68,6 +81,12 @@ struct LIFNativeEngine {
 
         if (delays) {
             edge_delays.assign(delays, delays + n_edges);
+        }
+
+        if (mask) {
+            nonlinear_mask.assign(mask, mask + n_neurons);
+        } else {
+            nonlinear_mask.assign(n_neurons, 0);
         }
     }
 };
@@ -110,6 +129,35 @@ LIFNativeEngine* lif_create_engine_extended(
         params,
         tau_syn_per_neuron,
         edge_delays
+    );
+}
+
+LIFNativeEngine* lif_create_engine_nonlinear(
+    uint32_t num_neurons,
+    uint32_t num_edges,
+    const uint32_t* row_ptr,
+    const uint32_t* col_idx,
+    const double* weights,
+    const NativeLIFParams* params,
+    const double* tau_syn_per_neuron,
+    const uint32_t* edge_delays,
+    double coincidence_gamma,
+    const uint8_t* nonlinear_mask
+) {
+    if (!row_ptr || !col_idx || !weights || !params) {
+        return nullptr;
+    }
+    return new LIFNativeEngine(
+        num_neurons,
+        num_edges,
+        row_ptr,
+        col_idx,
+        weights,
+        params,
+        tau_syn_per_neuron,
+        edge_delays,
+        coincidence_gamma,
+        nonlinear_mask
     );
 }
 
@@ -157,10 +205,19 @@ uint32_t lif_step(
     uint32_t spike_count = 0;
 
     // 2. Membrane potential update & refractory handling
+    const bool has_nonlin = engine->has_nonlinearity;
+    const double gamma = engine->coincidence_gamma;
+    const uint8_t* mask = engine->nonlinear_mask.data();
+
     for (uint32_t i = 0; i < N; ++i) {
         if (ref[i] <= 0) {
             // Non-refractory integration
-            double dv = (1.0 - alpha_m) * v_rest + dt_rm * i_syn[i];
+            double cur_i = i_syn[i];
+            if (has_nonlin && mask[i] && cur_i > 0.0) {
+                // Model E: supralinear scaling of effective coincident current
+                cur_i = cur_i + gamma * (cur_i * cur_i * 0.02);
+            }
+            double dv = (1.0 - alpha_m) * v_rest + dt_rm * cur_i;
             v[i] = alpha_m * v[i] + dv;
 
             // Spike detection

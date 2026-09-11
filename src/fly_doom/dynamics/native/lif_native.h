@@ -44,6 +44,20 @@ LIFNativeEngine* lif_create_engine_extended(
     const uint32_t* edge_delays
 );
 
+// Create extended engine instance with nonlinear coincidence integration (Model E)
+LIFNativeEngine* lif_create_engine_nonlinear(
+    uint32_t num_neurons,
+    uint32_t num_edges,
+    const uint32_t* row_ptr,
+    const uint32_t* col_idx,
+    const double* weights,
+    const NativeLIFParams* params,
+    const double* tau_syn_per_neuron,
+    const uint32_t* edge_delays,
+    double coincidence_gamma,
+    const uint8_t* nonlinear_mask
+);
+
 // Destroy engine instance
 void lif_destroy_engine(LIFNativeEngine* engine);
 

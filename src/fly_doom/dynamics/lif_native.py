@@ -63,6 +63,20 @@ _LIB.lif_create_engine_extended.argtypes = [
     ctypes.POINTER(ctypes.c_uint32),  # edge_delays
 ]
 
+_LIB.lif_create_engine_nonlinear.restype = ctypes.c_void_p
+_LIB.lif_create_engine_nonlinear.argtypes = [
+    ctypes.c_uint32,  # num_neurons
+    ctypes.c_uint32,  # num_edges
+    ctypes.POINTER(ctypes.c_uint32),  # row_ptr
+    ctypes.POINTER(ctypes.c_uint32),  # col_idx
+    ctypes.POINTER(ctypes.c_double),  # weights
+    ctypes.POINTER(_NativeLIFParams),  # params
+    ctypes.POINTER(ctypes.c_double),  # tau_syn_per_neuron
+    ctypes.POINTER(ctypes.c_uint32),  # edge_delays
+    ctypes.c_double,  # coincidence_gamma
+    ctypes.POINTER(ctypes.c_uint8),  # nonlinear_mask
+]
+
 _LIB.lif_destroy_engine.restype = None
 _LIB.lif_destroy_engine.argtypes = [ctypes.c_void_p]
 
@@ -96,18 +110,21 @@ _LIB.lif_set_state.argtypes = [
 
 
 class LIFNativeEngine:
-    """High-performance native C++20 LIF simulation engine with delay queues."""
+    """High-performance native C++20 LIF simulation engine with delay queues and Model E coincidence."""
 
     def __init__(
         self,
         graph: ConnectomeGraph,
         params: Optional[LIFParameters] = None,
         edge_delays: Optional[np.ndarray] = None,
+        coincidence_gamma: float = 0.0,
+        nonlinear_mask: Optional[np.ndarray] = None,
     ):
         self.graph = graph
         self.params = params or LIFParameters()
         self.num_neurons = graph.num_neurons
         self.num_edges = graph.num_edges
+        self.coincidence_gamma = float(coincidence_gamma)
 
         # Ensure contiguous data layouts
         self._row_ptr = np.ascontiguousarray(graph.row_ptr, dtype=np.uint32)
@@ -136,16 +153,36 @@ class LIFNativeEngine:
             self._edge_delays = np.ascontiguousarray(edge_delays, dtype=np.uint32)
             delays_ptr = self._edge_delays.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32))
 
-        self._engine_ptr = _LIB.lif_create_engine_extended(
-            self.num_neurons,
-            self.num_edges,
-            self._row_ptr.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
-            self._col_idx.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
-            self._weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            ctypes.byref(c_params),
-            tau_ptr,
-            delays_ptr,
-        )
+        mask_ptr = None
+        if nonlinear_mask is not None:
+            self._nonlinear_mask = np.ascontiguousarray(nonlinear_mask, dtype=np.uint8)
+            mask_ptr = self._nonlinear_mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+
+        if self.coincidence_gamma > 0.0 and mask_ptr is not None:
+            self._engine_ptr = _LIB.lif_create_engine_nonlinear(
+                self.num_neurons,
+                self.num_edges,
+                self._row_ptr.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+                self._col_idx.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+                self._weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.byref(c_params),
+                tau_ptr,
+                delays_ptr,
+                ctypes.c_double(self.coincidence_gamma),
+                mask_ptr,
+            )
+        else:
+            self._engine_ptr = _LIB.lif_create_engine_extended(
+                self.num_neurons,
+                self.num_edges,
+                self._row_ptr.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+                self._col_idx.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+                self._weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.byref(c_params),
+                tau_ptr,
+                delays_ptr,
+            )
+
         if not self._engine_ptr:
             raise RuntimeError("Failed to create native C++ LIF engine instance")
 
@@ -154,7 +191,7 @@ class LIFNativeEngine:
             tier="computational_hypothesis",
             source="Native_LIF_Engine_CPP20",
             confidence=0.85,
-            rationale="Native C++20 implementation of LIF dynamics with delay queues and strict numerical equivalence",
+            rationale="Native C++20 implementation of LIF dynamics with delay queues and Model E coincidence nonlinearity",
         )
 
     def __del__(self) -> None:

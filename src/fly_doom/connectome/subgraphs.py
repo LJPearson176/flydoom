@@ -336,6 +336,13 @@ def create_canonical_phase1b_optic_circuit(
         counts = np.bincount(row_arr, minlength=total_neurons)
         row_ptr[1:] = np.cumsum(counts)
 
+    provenance_source = f"Canonical_Phase1B_Optic_Model_{model_variant}"
+    provenance_rationale = (
+        f"Canonical multi-column Reichardt circuit under Model {model_variant} with engineered null-direction inhibitory proxy"
+        if model_variant in ("D", "E")
+        else f"Canonical multi-column Reichardt circuit under Model {model_variant}"
+    )
+
     graph = ConnectomeGraph(
         num_neurons=total_neurons,
         row_ptr=row_ptr,
@@ -347,9 +354,9 @@ def create_canonical_phase1b_optic_circuit(
         hemispheres=hemispheres,
         provenance=Provenance(
             tier="computational_hypothesis",
-            source=f"Canonical_Phase1B_Optic_Model_{model_variant}",
+            source=provenance_source,
             confidence=0.85,
-            rationale=f"Canonical multi-column Reichardt circuit under Model {model_variant}",
+            rationale=provenance_rationale,
             doi="10.7554/eLife.29044",
         ),
     )

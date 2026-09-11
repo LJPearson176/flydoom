@@ -22,6 +22,10 @@ class DirectionalTuningResult:
     circular_variance: float  # Circular variance in [0.0, 1.0]
     best_cardinal_direction_deg: float  # Nearest of {0, 90, 180, 270}
     cardinal_error_deg: float  # Absolute distance to nearest cardinal direction
+    peak_response: float = 0.0  # Max response across directions
+    baseline_response: float = 0.0  # Min response across directions
+    response_latency_ms: Optional[float] = None  # Latency to peak response
+    trial_variance: float = 0.0  # Variance across tested directional responses
     on_response: Optional[float] = None
     off_response: Optional[float] = None
     polarity_index: Optional[float] = None  # (R_on - R_off) / (R_on + R_off)
@@ -34,6 +38,7 @@ def compute_vector_tuning(
     responses: Sequence[float],
     on_response: Optional[float] = None,
     off_response: Optional[float] = None,
+    response_latency_ms: Optional[float] = None,
     epsilon: float = 1e-6,
 ) -> DirectionalTuningResult:
     """Compute 2D vector summation tuning, preferred direction, and DSI.
@@ -94,6 +99,10 @@ def compute_vector_tuning(
     best_cardinal = cardinals[best_card_idx]
     card_error = card_diffs[best_card_idx]
 
+    peak_r = float(np.max(r_arr)) if len(r_arr) > 0 else 0.0
+    baseline_r = float(np.min(r_arr)) if len(r_arr) > 0 else 0.0
+    trial_var = float(np.var(r_arr)) if len(r_arr) > 0 else 0.0
+
     # 5. Polarity Index (ON vs OFF)
     polarity_idx = None
     if on_response is not None and off_response is not None:
@@ -111,6 +120,10 @@ def compute_vector_tuning(
         circular_variance=circular_variance,
         best_cardinal_direction_deg=best_cardinal,
         cardinal_error_deg=card_error,
+        peak_response=peak_r,
+        baseline_response=baseline_r,
+        response_latency_ms=response_latency_ms,
+        trial_variance=trial_var,
         on_response=on_response,
         off_response=off_response,
         polarity_index=polarity_idx,
@@ -127,6 +140,10 @@ class PopulationTuningSummary:
     median_dsi: float
     mean_circular_variance: float
     mean_cardinal_error_deg: float
+    mean_peak_response: float
+    mean_baseline_response: float
+    mean_trial_variance: float
+    mean_latency_ms: Optional[float]
     mean_polarity_index: Optional[float]
     results: List[DirectionalTuningResult]
 
@@ -142,6 +159,10 @@ class PopulationTuningSummary:
                 median_dsi=0.0,
                 mean_circular_variance=1.0,
                 mean_cardinal_error_deg=45.0,
+                mean_peak_response=0.0,
+                mean_baseline_response=0.0,
+                mean_trial_variance=0.0,
+                mean_latency_ms=None,
                 mean_polarity_index=None,
                 results=[],
             )
@@ -149,6 +170,12 @@ class PopulationTuningSummary:
         dsi_vals = [r.dsi for r in results]
         circ_vars = [r.circular_variance for r in results]
         card_errs = [r.cardinal_error_deg for r in results]
+        peaks = [r.peak_response for r in results]
+        baselines = [r.baseline_response for r in results]
+        variances = [r.trial_variance for r in results]
+
+        latencies = [r.response_latency_ms for r in results if r.response_latency_ms is not None]
+        mean_lat = float(np.mean(latencies)) if latencies else None
 
         pol_vals = [r.polarity_index for r in results if r.polarity_index is not None]
         mean_pol = float(np.mean(pol_vals)) if pol_vals else None
@@ -160,6 +187,10 @@ class PopulationTuningSummary:
             median_dsi=float(np.median(dsi_vals)),
             mean_circular_variance=float(np.mean(circ_vars)),
             mean_cardinal_error_deg=float(np.mean(card_errs)),
+            mean_peak_response=float(np.mean(peaks)),
+            mean_baseline_response=float(np.mean(baselines)),
+            mean_trial_variance=float(np.mean(variances)),
+            mean_latency_ms=mean_lat,
             mean_polarity_index=mean_pol,
             results=results,
         )
@@ -172,6 +203,12 @@ class PopulationTuningSummary:
             "median_dsi": round(self.median_dsi, 4),
             "mean_circular_variance": round(self.mean_circular_variance, 4),
             "mean_cardinal_error_deg": round(self.mean_cardinal_error_deg, 2),
+            "mean_peak_response": round(self.mean_peak_response, 2),
+            "mean_baseline_response": round(self.mean_baseline_response, 2),
+            "mean_trial_variance": round(self.mean_trial_variance, 2),
+            "mean_latency_ms": round(self.mean_latency_ms, 2)
+            if self.mean_latency_ms is not None
+            else None,
             "mean_polarity_index": round(self.mean_polarity_index, 4)
             if self.mean_polarity_index is not None
             else None,

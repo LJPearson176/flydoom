@@ -102,6 +102,8 @@ class LIFReferenceEngine:
         graph: ConnectomeGraph,
         params: Optional[LIFParameters] = None,
         edge_delays: Optional[np.ndarray] = None,
+        coincidence_gamma: float = 0.0,
+        nonlinear_mask: Optional[np.ndarray] = None,
     ):
         self.graph = graph
         self.params = params or LIFParameters()
@@ -109,6 +111,12 @@ class LIFReferenceEngine:
             np.ascontiguousarray(edge_delays, dtype=np.uint32)
             if edge_delays is not None
             else None
+        )
+        self.coincidence_gamma = float(coincidence_gamma)
+        self.nonlinear_mask = (
+            np.ascontiguousarray(nonlinear_mask, dtype=bool)
+            if nonlinear_mask is not None
+            else np.zeros(graph.num_neurons, dtype=bool)
         )
         self.alpha_syn = self.params.get_alpha_syn(graph.num_neurons)
         self.state = LIFState.initialize(graph.num_neurons, self.params)
@@ -138,7 +146,12 @@ class LIFReferenceEngine:
 
         # 4. Integrate membrane potential for non-refractory neurons
         if np.any(non_refractory):
-            dv = (1.0 - p.alpha_m) * p.v_rest + (p.dt * p.r_m) * s.i_syn[non_refractory]
+            eff_i = s.i_syn.copy()
+            if self.coincidence_gamma > 0.0:
+                mask = self.nonlinear_mask & (eff_i > 0.0)
+                if np.any(mask):
+                    eff_i[mask] = eff_i[mask] + self.coincidence_gamma * (eff_i[mask] ** 2 * 0.02)
+            dv = (1.0 - p.alpha_m) * p.v_rest + (p.dt * p.r_m) * eff_i[non_refractory]
             s.v[non_refractory] = p.alpha_m * s.v[non_refractory] + dv
 
         # For refractory neurons, clamp to v_reset and decrement counter
