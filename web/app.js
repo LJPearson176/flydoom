@@ -54,7 +54,52 @@ animate();
 
 // --- ANATOMY MODE & INTERACTIVE SYNAPSE/BRANCH LOGIC ---
 
+let CURRENT_ANATOMY_MODE = 'synthetic';
+let CURRENT_DATASET = null;
 let SYNAPSE_DATA = [];
+
+function loadDataset(url, mode) {
+  fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error(`Failed to load ${url}`);
+      return res.json();
+    })
+    .then(data => {
+      CURRENT_ANATOMY_MODE = mode;
+      CURRENT_DATASET = data;
+      initAnatomy(data);
+      updateBannerAndInspector(mode, data);
+    })
+    .catch(err => {
+      console.warn(`Could not load ${url}:`, err);
+    });
+}
+
+function updateBannerAndInspector(mode, data) {
+  const isBio = (mode === 'malecns');
+  const title = document.querySelector('#modelStatusTitle');
+  const desc = document.querySelector('#modelStatusDesc');
+  const statusDot = document.querySelector('#statusDot');
+  const partnerBadge = document.querySelector('#partnerCountBadge');
+
+  if (isBio) {
+    if (title) title.textContent = 'MALECNS v1.0 BIOLOGICAL RECONSTRUCTION';
+    if (desc) desc.textContent = `Authentic EM connectome extraction for Drosophila T4a Body ID ${data.target_cell_id}. ${data.total_synapses} chemical synapses, 5 partner classes, 8 nm EM coordinates.`;
+    if (statusDot) {
+      statusDot.style.background = 'var(--cyan)';
+      statusDot.style.boxShadow = '0 0 10px var(--cyan)';
+    }
+    if (partnerBadge) partnerBadge.textContent = `${data.total_synapses} EM SYNAPSES`;
+  } else {
+    if (title) title.textContent = 'SYNTHETIC CANONICAL T4';
+    if (desc) desc.textContent = 'Not derived from MaleCNS EM data. Used for hypothesis testing. 110 synthetic contacts, 4 cell types.';
+    if (statusDot) {
+      statusDot.style.background = 'var(--amber)';
+      statusDot.style.boxShadow = '0 0 10px var(--amber)';
+    }
+    if (partnerBadge) partnerBadge.textContent = `${data.total_synapses || 110} CONTACTS`;
+  }
+}
 
 function initAnatomy(data) {
   SYNAPSE_DATA = data.synapses || [];
@@ -97,7 +142,7 @@ function initAnatomy(data) {
     });
   }
 
-  // Add click listeners to dendritic branches for symmetric tri-directional selection
+  // Add click listeners to dendritic branches
   document.querySelectorAll('.dendrite-branch').forEach(branch => {
     branch.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -108,22 +153,13 @@ function initAnatomy(data) {
 
   renderSynapseTable();
 
-  // Select default synapse (e.g. #1)
   if (SYNAPSE_DATA.length > 0) {
     selectSynapse(SYNAPSE_DATA[0].id);
   }
 }
 
-// Fetch sealed anatomy.json or fallback gracefully
-fetch('./anatomy.json')
-  .then(res => {
-    if (!res.ok) throw new Error('Failed to load anatomy.json');
-    return res.json();
-  })
-  .then(data => initAnatomy(data))
-  .catch(err => {
-    console.warn('Could not fetch anatomy.json, relying on embedded fallback:', err);
-  });
+// Initial load: Synthetic canonical hypothesis dataset
+loadDataset('./anatomy.json', 'synthetic');
 
 // Populate Synapse Table
 const tableBody = document.querySelector('#synapseTableBody');
@@ -162,7 +198,7 @@ document.querySelectorAll('.partner-pill').forEach(pill => {
   });
 });
 
-// Interactive Element Selection
+// Interactive Element Selection (Tri-Partite Layering)
 function selectSynapse(id) {
   const syn = SYNAPSE_DATA.find(s => s.id === id);
   if (!syn) return;
@@ -174,33 +210,48 @@ function selectSynapse(id) {
 
   const titleElem = document.querySelector('#inspectorTitle');
   if (titleElem) {
-    titleElem.innerHTML = 'SELECTED ELEMENT: <strong>' + syn.type + ' SYNAPSE #' + syn.id + '</strong>';
+    const tierName = (CURRENT_ANATOMY_MODE === 'malecns') ? 'BIOLOGICAL EM' : 'SYNTHETIC';
+    titleElem.innerHTML = `SELECTED ELEMENT: <strong>${syn.type} ${tierName} SYNAPSE #${syn.id}</strong>`;
   }
+
   const detailsElem = document.querySelector('#inspectorDetails');
   if (detailsElem) {
-    const ntDesc = syn.nt_full || (syn.nt === 'ACh' ? 'Acetylcholine (Excitatory)' : (syn.nt === 'GABA' ? 'GABA (Shunting Inhibitory)' : 'Glutamate (Inhibitory GluCl)'));
-    detailsElem.innerHTML = '<span>PRE-TYPE: <b style="color:' + syn.color + '">' + syn.type + ' (#' + syn.preId + ')</b></span>' +
-      '<span>COMPARTMENT: <b>' + syn.comp.replace('_', ' ').toUpperCase() + '</b></span>' +
-      '<span>COORDINATES: <b>(' + syn.x + ', ' + syn.y + ', ' + syn.z + ') μm</b></span>' +
-      '<span>TRANSMITTER: <b class="orange-text">' + ntDesc + '</b></span>' +
-      '<span>DELAY / TAU: <b>' + syn.tau + '</b></span>' +
-      '<span>RECEPTIVE FIELD: <b>Visual Column ' + syn.col + ' (Ommatidium #' + (400 + syn.col * 8) + ')</b></span>';
+    const rawVoxelStr = syn.raw_voxel ? `[${syn.raw_voxel.join(', ')}] (8 nm voxels)` : `(${syn.x}, ${syn.y}, ${syn.z}) μm`;
+    const distStr = syn.dist_to_soma_um ? `<b>${syn.dist_to_soma_um} μm from soma</b>` : `<b>${syn.comp}</b>`;
+
+    detailsElem.innerHTML =
+      `<span>PRE-TYPE: <b style="color:${syn.color}">${syn.type} (Pre Body #${syn.preId})</b></span>` +
+      `<span>COMPARTMENT: <b>${syn.comp.replace('_', ' ').toUpperCase()}</b></span>` +
+      `<span>RAW EM COORD: <b>${rawVoxelStr}</b></span>` +
+      `<span>SOMA DISTANCE: ${distStr}</span>` +
+      `<span>TRANSMITTER: <b class="orange-text">${syn.nt_full || syn.nt}</b></span>` +
+      `<span>RECEPTIVE FIELD: <b>Column ${syn.col} (Ommatidium #${400 + syn.col * 8})</b></span>`;
   }
 
   const provTier = document.querySelector('#provTierBadge');
-  if (provTier) {
-    provTier.textContent = 'COMPUTATIONAL_HYPOTHESIS';
-    provTier.className = 'provenance-tier-tag hypothesis';
-  }
   const provSource = document.querySelector('#provSource');
-  if (provSource) provSource.textContent = 'Synthetic_Canonical_T4a_Model';
   const provRationale = document.querySelector('#provRationale');
-  if (provRationale) provRationale.textContent = 'Parameterized hypothesis testing of ' + syn.comp + ' inputs based on Takemura et al. (2017) and Borst & Haag (2020).';
+
+  if (CURRENT_ANATOMY_MODE === 'malecns') {
+    if (provTier) {
+      provTier.textContent = 'BIOLOGICAL_RECONSTRUCTION';
+      provTier.className = 'provenance-tier-tag biological';
+    }
+    if (provSource) provSource.textContent = `MaleCNS_v1.0_EM (Body ID ${CURRENT_DATASET?.target_cell_id || 5813072001})`;
+    if (provRationale) provRationale.textContent = `Direct empirical EM chemical synapse measurement from Janelia MaleCNS v1.0. Nearest-skeleton projection: ${syn.dist_to_soma_um || 0} μm from root soma.`;
+  } else {
+    if (provTier) {
+      provTier.textContent = 'COMPUTATIONAL_HYPOTHESIS';
+      provTier.className = 'provenance-tier-tag hypothesis';
+    }
+    if (provSource) provSource.textContent = 'Synthetic_Canonical_T4a_Model';
+    if (provRationale) provRationale.textContent = 'Parameterized hypothesis testing of ' + syn.comp + ' inputs based on Takemura et al. (2017) and Borst & Haag (2020).';
+  }
 }
 
 function selectBranch(comp) {
   document.querySelectorAll('.dendrite-branch').forEach(b => b.classList.toggle('highlighted', b.dataset.branch === comp));
-  const mappedSyns = SYNAPSE_DATA.filter(s => s.comp === comp || (comp === 'leading' && s.comp === 'leading_tip'));
+  const mappedSyns = SYNAPSE_DATA.filter(s => s.comp === comp || (comp === 'leading' && s.comp === 'leading_tip') || (comp === 'leading' && s.comp === 'distal_tip'));
   document.querySelectorAll('.synapse-node').forEach(n => {
     const isMapped = mappedSyns.some(s => s.id == n.dataset.synId);
     n.classList.toggle('highlighted', isMapped);
@@ -245,16 +296,23 @@ document.querySelectorAll('.model-tab-btn').forEach(btn => {
   });
 });
 
-// Model Status Banner Buttons
+// Model Status Banner Switching Logic (Synthetic 1C-Hyp vs MaleCNS 1C-A)
 const btnSyn = document.querySelector('#statusSyntheticBtn');
 const btnReal = document.querySelector('#statusRealBtn');
+
 if (btnSyn) {
   btnSyn.addEventListener('click', () => {
     btnSyn.classList.add('active');
-    const label = document.querySelector('#modelStatusBanner .model-status-badge strong');
-    if (label) label.textContent = 'SYNTHETIC CANONICAL T4';
-    const desc = document.querySelector('#modelStatusBanner .model-status-desc');
-    if (desc) desc.textContent = 'Not derived from MaleCNS EM data. Used for hypothesis testing. 110 synthetic contacts, 4 cell types.';
+    if (btnReal) btnReal.classList.remove('active');
+    loadDataset('./anatomy.json', 'synthetic');
+  });
+}
+
+if (btnReal) {
+  btnReal.addEventListener('click', () => {
+    btnReal.classList.add('active');
+    if (btnSyn) btnSyn.classList.remove('active');
+    loadDataset('./malecns_anatomy.json', 'malecns');
   });
 }
 

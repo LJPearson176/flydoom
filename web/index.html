@@ -25,15 +25,15 @@
       
       <div class="model-status-banner" id="modelStatusBanner">
         <div class="model-status-badge">
-          <span class="warning-dot"></span>
-          <span>MODEL STATUS: <strong>SYNTHETIC CANONICAL T4</strong></span>
+          <span class="warning-dot" id="statusDot"></span>
+          <span>MODEL STATUS: <strong id="modelStatusTitle">SYNTHETIC CANONICAL T4</strong></span>
         </div>
-        <div class="model-status-desc">
+        <div class="model-status-desc" id="modelStatusDesc">
           Not derived from MaleCNS EM data. Used for hypothesis testing. 110 synthetic contacts, 4 cell types.
         </div>
         <div class="model-status-switch">
           <button class="active" id="statusSyntheticBtn">SYNTHETIC (1C-HYP)</button>
-          <button id="statusRealBtn" disabled title="Awaiting Phase 1C-A EM extraction">● MALECNS T4a — NOT YET LOADED</button>
+          <button id="statusRealBtn">MALECNS EM (1C-A)</button>
         </div>
       </div>
       <div class="subbar">
