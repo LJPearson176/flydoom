@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Compiled binaries and libraries
+*.dylib
+*.so
+*.o
+*.a
+
+# Test & runtime caches
+.pytest_cache/
+.DS_Store
