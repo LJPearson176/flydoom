@@ -1,16 +1,17 @@
-"""MaleCNS Single-Unit Anatomical T4 Reconstruction Module.
+"""Canonical Synthetic T4 Compartmental Hypothesis Model.
 
-Extracts, structures, and fingerprints the biological synaptic input matrix for a single
-Drosophila T4 motion-detecting neuron (specifically subtype T4a, preferring rightward / 0° motion)
-from the MaleCNS v1.0 connectomic dataset (Takemura et al., 2017 / Nature 2025 / neuPrint MaleCNS v1.0).
+Constructs an idealized synthetic synaptic input matrix for a single Drosophila T4 motion-detecting neuron
+(specifically subtype T4a, preferring rightward / 0° motion) to test dendritic compartmentalization hypotheses.
 
-Presynaptic inputs to T4a dendrites are segregated across anatomical compartments:
+STATUS: SYNTHETIC CANONICAL T4 (NOT raw MaleCNS EM data).
+Used for hypothesis testing of dendritic branch segregation prior to raw connectomic extraction.
+Presynaptic inputs (Mi4, Mi9, Mi1, Tm3) and coordinates are parameterized hypotheses based on
+literature motifs (Takemura et al., 2017; Strother et al., 2017; Borst & Haag, 2020; Nature 2025).
+
+Presynaptic inputs to T4a dendrites are partitioned across anatomical compartments:
   1. Leading / Null-suppression compartment: Mi4 (GABAergic) and Mi9 (Glutamatergic / inhibitory)
   2. Central / Non-delayed base excitation compartment: Mi1 (Cholinergic / fast excitation)
   3. Trailing / Delayed excitation compartment: Tm3 (Cholinergic / slow excitation)
-
-Synapses are mapped with empirical 3D coordinates (x, y, z in microns relative to T4a soma)
-and assigned to dendritic branches based on anatomical arborization.
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ class AnatomicalSynapse:
 
 @dataclass
 class T4AnatomicalReconstruction:
-    """Complete biological reconstruction of a single T4 neuron's synaptic receptive field."""
+    """Canonical synthetic reconstruction of a single T4 neuron's synaptic receptive field."""
 
     target_cell_id: int
     target_cell_type: str  # T4a
@@ -54,10 +55,10 @@ class T4AnatomicalReconstruction:
     soma_position_um: Tuple[float, float, float]
     provenance: Provenance = field(
         default_factory=lambda: Provenance(
-            tier="biological_reconstruction",
-            source="MaleCNS_v1.0_Takemura2017_Nature2025",
-            confidence=0.95,
-            rationale="Single-unit T4a dendritic arborization and presynaptic input mapping from MaleCNS EM connectome",
+            tier="computational_hypothesis",
+            source="Synthetic_Canonical_T4a_Model",
+            confidence=0.85,
+            rationale="Synthetic canonical T4a dendritic arborization and presynaptic input mapping for hypothesis testing",
             doi="10.1038/s41586-025-09276-5",
             figure_table_ref="Figure 3 and Extended Data Fig. 4",
             access_date="2026-09-11",

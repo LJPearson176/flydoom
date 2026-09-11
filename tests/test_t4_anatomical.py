@@ -54,5 +54,5 @@ def test_t4a_connectome_graph_conversion():
     assert graph.num_neurons == 13
     assert graph.num_edges == 12  # 12 incoming edges to T4a
     assert graph.total_contacts == 110
-    assert graph.provenance.tier == "biological_reconstruction"
+    assert graph.provenance.tier == "computational_hypothesis"
     assert meta["target_cell_type"] == "T4a"

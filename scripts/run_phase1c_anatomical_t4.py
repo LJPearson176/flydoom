@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Phase 1C: MaleCNS Anatomical T4 Reconstruction & Spatial Compartmentalization Benchmark.
+"""Phase 1C: Synthetic T4 Compartment Hypothesis Benchmark.
 
-Executes the four-model progression on the identical reconstructed T4a neuron across
+Executes the four-model progression on an idealized canonical synthetic T4a neuron across
 the standardized 8-direction drifting grating protocol:
   - Model A: Canonical point-LIF baseline (homogeneous dynamics, lumped soma)
   - Model B: Point-LIF with calibrated heterogeneous temporal dynamics (tau_slow, delay)
   - Model C: Passive multi-compartment dendritic tree (spatial input segregation)
   - Model D: Active / nonlinear multi-compartment tree (spatial segregation + branch shunting & coincidence)
 
-Evaluates the 3 mandatory Phase 1C validation gates:
-  1. malecns_subgraph_integrity_gate
-  2. anatomical_spatial_segregation_gate
-  3. anatomical_directionality_gate
+Evaluates the 3 synthetic compartment hypothesis validation gates:
+  1. synthetic_subgraph_integrity_gate
+  2. spatial_segregation_hypothesis_gate
+  3. dendritic_directionality_hypothesis_gate
 """
 
 from __future__ import annotations
@@ -150,12 +150,12 @@ def main() -> None:
     # 1. Provenance Registry
     reg = ProvenanceRegistry()
     reg.register(
-        "malecns_t4a_reconstruction",
+        "synthetic_t4a_hypothesis_model",
         Provenance(
-            tier="biological_reconstruction",
-            source="MaleCNS_v1.0_Takemura2017_Nature2025",
-            confidence=0.95,
-            rationale="Single-unit T4a dendritic arborization and synapse contacts from MaleCNS EM dataset",
+            tier="computational_hypothesis",
+            source="Synthetic_Canonical_T4a_Model",
+            confidence=0.85,
+            rationale="Synthetic canonical T4a dendritic arborization and presynaptic input mapping for hypothesis testing",
             doi="10.1038/s41586-025-09276-5",
             figure_table_ref="Figure 3 and Extended Data Fig. 4",
             access_date="2026-09-11",
@@ -185,16 +185,16 @@ def main() -> None:
         ),
     )
 
-    # 2. Extract Biological Single-Unit Reconstruction
+    # 2. Extract Synthetic Single-Unit Reconstruction
     recon = build_canonical_t4a_reconstruction(seed=42)
     graph, meta = recon.to_connectome_graph()
 
-    print(f"\n[1/4] Extracted Anatomical T4a: ID={recon.target_cell_id}, Synapses={recon.total_synapses}")
+    print(f"\n[1/4] Constructed Synthetic T4a Model: ID={recon.target_cell_id}, Synapses={recon.total_synapses}")
     print(f"  Presynaptic Partners: {recon.presynaptic_counts_by_type}")
     print(f"  Compartment Mapping:  {recon.presynaptic_counts_by_compartment}")
 
-    # Evaluate Anatomical Gates
-    # Gate 1: malecns_subgraph_integrity_gate
+    # Evaluate Synthetic Gates
+    # Gate 1: synthetic_subgraph_integrity_gate
     expected_partners = {"Mi1", "Tm3", "Mi4", "Mi9"}
     actual_partners = set(recon.presynaptic_counts_by_type.keys())
     integrity_pass = (
@@ -204,16 +204,16 @@ def main() -> None:
         and graph.num_neurons == 13
     )
 
-    # Gate 2: anatomical_spatial_segregation_gate
+    # Gate 2: spatial_segregation_hypothesis_gate
     comp_centroids = recon.compute_compartment_centroids()
     x_lead = comp_centroids["leading"][0]
     x_cent = comp_centroids["central"][0]
     x_trail = comp_centroids["trailing"][0]
     segregation_pass = bool(x_lead < x_cent < x_trail and (x_trail - x_lead) > 5.0)
 
-    print(f"\n[2/4] Anatomical Gate Verification:")
-    print(f"  Gate 1 (malecns_subgraph_integrity):   {'PASS' if integrity_pass else 'FAIL'}")
-    print(f"  Gate 2 (spatial_segregation):          {'PASS' if segregation_pass else 'FAIL'} (x: lead={x_lead:.2f}, cent={x_cent:.2f}, trail={x_trail:.2f} um)")
+    print(f"\n[2/4] Hypothesis Gate Verification:")
+    print(f"  Gate 1 (synthetic_subgraph_integrity):        {'PASS' if integrity_pass else 'FAIL'}")
+    print(f"  Gate 2 (spatial_segregation_hypothesis):     {'PASS' if segregation_pass else 'FAIL'} (x: lead={x_lead:.2f}, cent={x_cent:.2f}, trail={x_trail:.2f} um)")
 
     # 3. Four-Model Electrophysiological Progression
     params = CompartmentalParameters()
@@ -238,7 +238,7 @@ def main() -> None:
     rc = SyntheticReichardtCorrelator(ReichardtParameters(tau_delay_ms=params.tau_syn_slow))
     r_pref, r_null, reichardt_dsi = rc.test_motion(velocity_px_s=64.0)
 
-    # Gate 3: anatomical_directionality_gate
+    # Gate 3: dendritic_directionality_hypothesis_gate
     # Requires Model D to produce biological adequacy DSI >= 0.40 and significant increase over Model A/B
     dsi_d = results[CompartmentModelType.MODEL_D.value].dsi
     dsi_c = results[CompartmentModelType.MODEL_C.value].dsi
@@ -254,12 +254,13 @@ def main() -> None:
     print(f"  Model A -> Model B (Temporal tuning):    Delta DSI = {dsi_b - dsi_a:+.4f}")
     print(f"  Model B -> Model C (Spatial compartments): Delta DSI = {delta_compartmental:+.4f}")
     print(f"  Model C -> Model D (Active shunting tree): Delta DSI = {delta_nonlinear_tree:+.4f}")
-    print(f"  Gate 3 (anatomical_directionality_gate): {'PASS' if directionality_pass else 'FAIL'} (Model D DSI={dsi_d:.4f}, threshold >= 0.40)")
+    print(f"  Gate 3 (dendritic_directionality_gate):  {'PASS' if directionality_pass else 'FAIL'} (Model D DSI={dsi_d:.4f}, threshold >= 0.40)")
 
     # 4. Generate Sealed Experiment Bundle
-    run_id = f"phase1c_anatomical_t4_{int(time.time())}"
+    run_id = f"phase1c_synthetic_compartment_hypothesis_{int(time.time())}"
     config = {
-        "experiment_name": "Phase1C_MaleCNS_Anatomical_T4_Reconstruction",
+        "experiment_name": "Phase1C_Synthetic_Compartment_Hypothesis",
+        "status": "SYNTHETIC CANONICAL T4 (Not derived from MaleCNS EM data)",
         "target_cell_id": recon.target_cell_id,
         "target_cell_type": recon.target_cell_type,
         "synapse_count": recon.total_synapses,
@@ -295,7 +296,7 @@ def main() -> None:
 
     bundle = ExperimentBundle(
         run_id=run_id,
-        experiment_name="Phase1C_MaleCNS_Anatomical_T4_Reconstruction",
+        experiment_name="Phase1C_Synthetic_Compartment_Hypothesis",
         config=config,
         provenance_registry=reg,
         dataset_fingerprint=graph.compute_fingerprint(),
@@ -303,25 +304,25 @@ def main() -> None:
     )
 
     bundle.add_gate(
-        name="malecns_subgraph_integrity_gate",
+        name="synthetic_subgraph_integrity_gate",
         passed=integrity_pass,
         observed_value=f"Total_synapses={recon.total_synapses}, Partners={list(actual_partners)}",
         threshold="110 synapses across Mi1, Tm3, Mi4, Mi9",
-        rationale="Single-unit T4a reconstruction preserves partner counts and cell identity from MaleCNS EM",
+        rationale="Synthetic canonical T4a model preserves prescribed partner counts and cell identity",
     )
     bundle.add_gate(
-        name="anatomical_spatial_segregation_gate",
+        name="spatial_segregation_hypothesis_gate",
         passed=segregation_pass,
         observed_value=f"x_lead={x_lead:.2f}, x_cent={x_cent:.2f}, x_trail={x_trail:.2f}",
         threshold="x_lead < x_cent < x_trail with separation > 5 um",
-        rationale="Presynaptic partner synapses occupy distinct spatial regions along the dendritic tree",
+        rationale="Presynaptic partner synapses occupy distinct spatial regions along the synthetic dendritic tree",
     )
     bundle.add_gate(
-        name="anatomical_directionality_gate",
+        name="dendritic_directionality_hypothesis_gate",
         passed=directionality_pass,
         observed_value=f"Model_D_DSI={dsi_d:.4f}, Delta_over_A={dsi_d - dsi_a:+.4f}",
         threshold="DSI >= 0.40 and Delta_DSI > +0.25",
-        rationale="Active dendritic compartmentalization bridges the gap toward biological direction selectivity",
+        rationale="Active dendritic compartmentalization validates hypothesis H4' in silico",
     )
 
     bundle_dir = bundle.save(Path("runs"))
