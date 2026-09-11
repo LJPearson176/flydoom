@@ -51,6 +51,18 @@ _LIB.lif_create_engine.argtypes = [
     ctypes.POINTER(_NativeLIFParams),  # params
 ]
 
+_LIB.lif_create_engine_extended.restype = ctypes.c_void_p
+_LIB.lif_create_engine_extended.argtypes = [
+    ctypes.c_uint32,  # num_neurons
+    ctypes.c_uint32,  # num_edges
+    ctypes.POINTER(ctypes.c_uint32),  # row_ptr
+    ctypes.POINTER(ctypes.c_uint32),  # col_idx
+    ctypes.POINTER(ctypes.c_double),  # weights
+    ctypes.POINTER(_NativeLIFParams),  # params
+    ctypes.POINTER(ctypes.c_double),  # tau_syn_per_neuron
+    ctypes.POINTER(ctypes.c_uint32),  # edge_delays
+]
+
 _LIB.lif_destroy_engine.restype = None
 _LIB.lif_destroy_engine.argtypes = [ctypes.c_void_p]
 
@@ -84,9 +96,14 @@ _LIB.lif_set_state.argtypes = [
 
 
 class LIFNativeEngine:
-    """High-performance native C++20 LIF simulation engine."""
+    """High-performance native C++20 LIF simulation engine with delay queues."""
 
-    def __init__(self, graph: ConnectomeGraph, params: Optional[LIFParameters] = None):
+    def __init__(
+        self,
+        graph: ConnectomeGraph,
+        params: Optional[LIFParameters] = None,
+        edge_delays: Optional[np.ndarray] = None,
+    ):
         self.graph = graph
         self.params = params or LIFParameters()
         self.num_neurons = graph.num_neurons
@@ -97,24 +114,37 @@ class LIFNativeEngine:
         self._col_idx = np.ascontiguousarray(graph.col_idx, dtype=np.uint32)
         self._weights = np.ascontiguousarray(graph.weights, dtype=np.float64)
 
+        base_tau_syn = float(self.params.tau_syn) if isinstance(self.params.tau_syn, (int, float)) else 5.0
         c_params = _NativeLIFParams(
             v_rest=self.params.v_rest,
             v_reset=self.params.v_reset,
             v_thresh=self.params.v_thresh,
             tau_m=self.params.tau_m,
-            tau_syn=self.params.tau_syn,
+            tau_syn=base_tau_syn,
             t_ref=self.params.t_ref,
             dt=self.params.dt,
             r_m=self.params.r_m,
         )
 
-        self._engine_ptr = _LIB.lif_create_engine(
+        tau_ptr = None
+        if isinstance(self.params.tau_syn, np.ndarray):
+            self._tau_syn_arr = np.ascontiguousarray(self.params.tau_syn, dtype=np.float64)
+            tau_ptr = self._tau_syn_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+        delays_ptr = None
+        if edge_delays is not None:
+            self._edge_delays = np.ascontiguousarray(edge_delays, dtype=np.uint32)
+            delays_ptr = self._edge_delays.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32))
+
+        self._engine_ptr = _LIB.lif_create_engine_extended(
             self.num_neurons,
             self.num_edges,
             self._row_ptr.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
             self._col_idx.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
             self._weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             ctypes.byref(c_params),
+            tau_ptr,
+            delays_ptr,
         )
         if not self._engine_ptr:
             raise RuntimeError("Failed to create native C++ LIF engine instance")
@@ -124,7 +154,7 @@ class LIFNativeEngine:
             tier="computational_hypothesis",
             source="Native_LIF_Engine_CPP20",
             confidence=0.85,
-            rationale="Native C++20 implementation of LIF dynamics with strict numerical equivalence to reference model",
+            rationale="Native C++20 implementation of LIF dynamics with delay queues and strict numerical equivalence",
         )
 
     def __del__(self) -> None:

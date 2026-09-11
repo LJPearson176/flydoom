@@ -45,6 +45,9 @@ class Provenance:
     source: str
     confidence: float
     rationale: str
+    doi: Optional[str] = None
+    figure_table_ref: Optional[str] = None
+    access_date: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.tier not in VALID_PROVENANCE_TIERS:
@@ -64,6 +67,9 @@ class Provenance:
             "source": self.source,
             "confidence": self.confidence,
             "rationale": self.rationale,
+            "doi": self.doi,
+            "figure_table_ref": self.figure_table_ref,
+            "access_date": self.access_date,
         }
 
 

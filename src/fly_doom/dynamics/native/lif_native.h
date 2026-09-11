@@ -22,7 +22,7 @@ typedef struct {
     double r_m;
 } NativeLIFParams;
 
-// Create engine instance
+// Create standard engine instance
 LIFNativeEngine* lif_create_engine(
     uint32_t num_neurons,
     uint32_t num_edges,
@@ -30,6 +30,18 @@ LIFNativeEngine* lif_create_engine(
     const uint32_t* col_idx,
     const double* weights,
     const NativeLIFParams* params
+);
+
+// Create extended engine instance with per-neuron tau_syn and per-edge delays
+LIFNativeEngine* lif_create_engine_extended(
+    uint32_t num_neurons,
+    uint32_t num_edges,
+    const uint32_t* row_ptr,
+    const uint32_t* col_idx,
+    const double* weights,
+    const NativeLIFParams* params,
+    const double* tau_syn_per_neuron,
+    const uint32_t* edge_delays
 );
 
 // Destroy engine instance
