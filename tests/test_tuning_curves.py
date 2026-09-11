@@ -93,4 +93,6 @@ def test_population_tuning_summary():
     assert summary.mean_dsi > 0.9
     assert summary.mean_vector_strength > 0.5
     assert summary.fraction_pd_reliable == 1.0
+    assert summary.mean_modulation_index > 0.9  # peak 100 vs baseline 0 -> (100 - 0) / 100 = 1.0
+    assert summary.mean_contrast_ratio > 10.0
     assert summary.mean_polarity_index is not None and summary.mean_polarity_index > 0.7

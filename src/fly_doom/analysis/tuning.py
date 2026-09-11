@@ -28,6 +28,8 @@ class DirectionalTuningResult:
     cardinal_error_deg: float  # Absolute distance to nearest cardinal direction
     peak_response: float = 0.0  # Max response across directions
     baseline_response: float = 0.0  # Min response across directions
+    modulation_index: float = 0.0  # (R_peak - R_baseline) / (R_peak + R_baseline + eps)
+    contrast_ratio: float = 1.0  # R_peak / (R_baseline + eps)
     response_latency_ms: Optional[float] = None  # Latency to peak response
     trial_variance: float = 0.0  # Variance across tested directional responses
     on_response: Optional[float] = None
@@ -113,6 +115,10 @@ def compute_vector_tuning(
     baseline_r = float(np.min(r_arr)) if len(r_arr) > 0 else 0.0
     trial_var = float(np.var(r_arr)) if len(r_arr) > 0 else 0.0
 
+    # Modulation index & contrast ratio
+    mod_idx = (peak_r - baseline_r) / (peak_r + baseline_r + epsilon) if (peak_r + baseline_r) > 0 else 0.0
+    contrast_r = (peak_r / (baseline_r + epsilon)) if baseline_r > 0 else (peak_r / epsilon if peak_r > 0 else 1.0)
+
     # 5. Polarity Index (ON vs OFF)
     polarity_idx = None
     if on_response is not None and off_response is not None:
@@ -136,6 +142,8 @@ def compute_vector_tuning(
         cardinal_error_deg=card_error,
         peak_response=peak_r,
         baseline_response=baseline_r,
+        modulation_index=mod_idx,
+        contrast_ratio=contrast_r,
         response_latency_ms=response_latency_ms,
         trial_variance=trial_var,
         on_response=on_response,
@@ -158,6 +166,8 @@ class PopulationTuningSummary:
     mean_cardinal_error_deg: float
     mean_peak_response: float
     mean_baseline_response: float
+    mean_modulation_index: float
+    mean_contrast_ratio: float
     mean_trial_variance: float
     mean_latency_ms: Optional[float]
     mean_polarity_index: Optional[float]
@@ -179,6 +189,8 @@ class PopulationTuningSummary:
                 mean_cardinal_error_deg=45.0,
                 mean_peak_response=0.0,
                 mean_baseline_response=0.0,
+                mean_modulation_index=0.0,
+                mean_contrast_ratio=1.0,
                 mean_trial_variance=0.0,
                 mean_latency_ms=None,
                 mean_polarity_index=None,
@@ -192,6 +204,8 @@ class PopulationTuningSummary:
         card_errs = [r.cardinal_error_deg for r in results]
         peaks = [r.peak_response for r in results]
         baselines = [r.baseline_response for r in results]
+        mod_indices = [r.modulation_index for r in results]
+        contrast_ratios = [r.contrast_ratio for r in results]
         variances = [r.trial_variance for r in results]
 
         latencies = [r.response_latency_ms for r in results if r.response_latency_ms is not None]
@@ -211,6 +225,8 @@ class PopulationTuningSummary:
             mean_cardinal_error_deg=float(np.mean(card_errs)),
             mean_peak_response=float(np.mean(peaks)),
             mean_baseline_response=float(np.mean(baselines)),
+            mean_modulation_index=float(np.mean(mod_indices)),
+            mean_contrast_ratio=float(np.mean(contrast_ratios)),
             mean_trial_variance=float(np.mean(variances)),
             mean_latency_ms=mean_lat,
             mean_polarity_index=mean_pol,
@@ -229,6 +245,8 @@ class PopulationTuningSummary:
             "mean_cardinal_error_deg": round(self.mean_cardinal_error_deg, 2),
             "mean_peak_response": round(self.mean_peak_response, 2),
             "mean_baseline_response": round(self.mean_baseline_response, 2),
+            "mean_modulation_index": round(self.mean_modulation_index, 4),
+            "mean_contrast_ratio": round(self.mean_contrast_ratio, 2),
             "mean_trial_variance": round(self.mean_trial_variance, 2),
             "mean_latency_ms": round(self.mean_latency_ms, 2)
             if self.mean_latency_ms is not None
