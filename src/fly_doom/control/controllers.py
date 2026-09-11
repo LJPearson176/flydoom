@@ -4,7 +4,7 @@ Implements unified, controlled sensorimotor policies where the sensory encoder,
 motor decoder, and behavioral thresholds are held STRICTLY CONSTANT across all
 conditions, varying ONLY the biophysical neural substrate or synaptic knockouts:
 
-Controlled Neural Architectures (DOOM-002):
+Controlled Neural Architectures (DOOM-003):
   1. ControlledT4Controller(model_type=MODEL_A) -> Point LIF (DSI ~0.054)
   2. ControlledT4Controller(model_type=MODEL_B) -> Temporal Point LIF (DSI ~0.126)
   3. ControlledT4Controller(model_type=MODEL_C) -> Passive Dendritic Tree (DSI ~0.144)
@@ -75,6 +75,7 @@ class RandomController:
             "t4_l_spike": 0.0,
             "t4_r_spike": 0.0,
             "motion_asymmetry": 0.0,
+            "norm_asymmetry": 0.0,
             "center_depth": float(np.mean(obs.depth[:, 26:38])) if obs.depth is not None else 0.0,
         }
         return DoomAction(action_idx)
@@ -107,6 +108,7 @@ class BallisticForwardController:
             "t4_l_spike": 0.0,
             "t4_r_spike": 0.0,
             "motion_asymmetry": 0.0,
+            "norm_asymmetry": 0.0,
             "center_depth": center_dist,
         }
         return action
@@ -119,17 +121,21 @@ class BallisticForwardController:
 
 
 class ControlledT4Controller:
-    """Unified, controlled sensorimotor controller for DOOM-002 ablation.
+    """Unified, scale-normalized sensorimotor controller for DOOM-003.
 
-    Freezes:
+    Holds Strictly Invariant:
       - Retinal delta encoder (8x8 ommatidia, sigma=4.0px, gain=35.0)
-      - Fixed steering threshold (asymmetry > 0.50 -> TURN_RIGHT, < -0.50 -> TURN_LEFT)
-      - Fixed firing threshold (center_depth < 3.5, motion_energy > 0.40, ammo > 0)
-      - Fixed timestep dt_ms = 16.67 ms
+      - Timestep dt_ms = 16.67 ms
+      - Scale-invariant relative motion decoder:
+          hat{M}_L = M_L / (M_L + M_R + eps)
+          hat{M}_R = M_R / (M_L + M_R + eps)
+          hat{Delta} = hat{M}_R - hat{M}_L in [-1.0, 1.0]
+      - Fixed steering threshold (|hat{Delta}| > 0.15)
+      - Fixed firing threshold (center_depth < 3.5, center_motion > 0.35, ammo > 0)
 
     Varies ONLY:
       - Neural simulation engine (Model A, Model B, Model C, Model D)
-      - Optional synaptic knockouts (e.g. {'Mi4'}, {'Mi9'}, {'Tm3'}, {'Mi1'})
+      - Synaptic knockouts (e.g. {'Mi4'}, {'Mi9'}, {'Tm3'}, {'Mi1'})
     """
 
     def __init__(
@@ -194,10 +200,27 @@ class ControlledT4Controller:
         spike_r = self.t4_right.step(in_mi1=in_mi1_r, in_tm3=in_tm3_r, in_mi4=in_mi4_r, in_mi9=in_mi9_r)
 
         # High-order somatic / spike motion energy
-        motion_l = max(0.0, self.t4_left.v_soma - self.t4_left.params.v_rest) + (10.0 if spike_l else 0.0)
-        motion_r = max(0.0, self.t4_right.v_soma - self.t4_right.params.v_rest) + (10.0 if spike_r else 0.0)
+        v_l = self.t4_left.v_soma
+        v_r = self.t4_right.v_soma
+        v_rest = self.params.v_rest
 
-        asymmetry = motion_r - motion_l
+        # Membrane depolarization above rest (or hyperpolarization relative to baseline)
+        depol_l = max(0.0, v_l - v_rest) + (15.0 if spike_l else 0.0)
+        depol_r = max(0.0, v_r - v_rest) + (15.0 if spike_r else 0.0)
+
+        # Scale-Invariant Relative Motion Transduction (hat{M} in [0, 1])
+        eps = 1e-4
+        total_depol = depol_l + depol_r
+        if total_depol > eps:
+            norm_l = depol_l / (total_depol + eps)
+            norm_r = depol_r / (total_depol + eps)
+            norm_asymmetry = norm_r - norm_l  # in [-1.0, 1.0]
+        else:
+            # Fallback to normalized linear voltage difference
+            diff_v = v_r - v_l
+            norm_asymmetry = float(np.tanh(diff_v / 20.0))
+
+        raw_asymmetry = depol_r - depol_l
         center_motion = float(np.mean(on_currents[:, 3:5]))
         center_depth = float(np.mean(obs.depth[:, 26:38])) if obs.depth is not None else 10.0
 
@@ -205,28 +228,28 @@ class ControlledT4Controller:
         self.last_neural_state = {
             "retina_mean": float(np.mean(gray)),
             "retina_delta": float(np.mean(np.abs(currents))),
-            "t4_l_v": float(self.t4_left.v_soma),
-            "t4_r_v": float(self.t4_right.v_soma),
+            "t4_l_v": float(v_l),
+            "t4_r_v": float(v_r),
             "t4_l_spike": 1.0 if spike_l else 0.0,
             "t4_r_spike": 1.0 if spike_r else 0.0,
-            "motion_asymmetry": float(asymmetry),
+            "motion_asymmetry": float(raw_asymmetry),
+            "norm_asymmetry": float(norm_asymmetry),
             "center_depth": float(center_depth),
         }
 
-        # 4. FROZEN MOTOR DECODER POLICY
-        # (Held perfectly invariant across all model conditions)
-        steer_threshold = 0.50
+        # 4. FROZEN SCALE-INVARIANT MOTOR DECODER POLICY
+        steer_threshold = 0.15  # 15% normalized lateral motion asymmetry
         fire_depth_max = 3.50
-        fire_motion_min = 0.40
+        fire_motion_min = 0.35
 
-        # Firing rule: target within engagement range, motion confirmed, ammo present
+        # Firing rule: target in central conical zone with active motion
         if center_depth < fire_depth_max and center_motion > fire_motion_min and obs.ammo > 0:
             return DoomAction.FIRE
 
-        # Optomotor steering rule: orient to balance horizontal optical slip
-        if asymmetry > steer_threshold:
+        # Optomotor steering rule: turn toward / align with normalized motion slip
+        if norm_asymmetry > steer_threshold:
             return DoomAction.TURN_RIGHT
-        elif asymmetry < -steer_threshold:
+        elif norm_asymmetry < -steer_threshold:
             return DoomAction.TURN_LEFT
         else:
             return DoomAction.FORWARD

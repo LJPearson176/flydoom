@@ -1,11 +1,12 @@
-"""Pure Python / NumPy E1M1 Raycaster & Combat Simulator for Headless DOOM-001.
+"""Pure Python / NumPy E1M1 Raycaster & Navigation Task Simulator for DOOM-003.
 
 Provides a fully deterministic, self-contained Doom-style 2.5D visual arena:
-  - Textured / shaded 2D map with corridors, walls, and pillars.
-  - Moving enemies (Imps) with motion kinematics that produce authentic optical flow.
+  - Textured / shaded 2D map with corridors, walls, pillars, and exit gateway.
+  - Active Imp entities with motion kinematics producing realistic optical flow.
   - Perspective raycasting rendering (64x64 RGB + Depth).
-  - Combat and navigation dynamics: forward movement, turning, projectile firing, imp damage/kills.
-  - Health decrement when attacked, ammo consumption, navigation distance accumulation.
+  - Explicit Navigation Objective: Navigate from spawn (2.5, 2.5) to exit portal (13.5, 12.0).
+  - Disentangled metrics tracking: Navigation progress, combat accuracy, survival time, damage dealt.
+  - Wall collision penalties preventing blind wall-ramming, punishing aimless random walk.
 """
 
 from __future__ import annotations
@@ -51,9 +52,9 @@ class MockDoomArena:
         self.num_imps_init = num_imps
         self.provenance = Provenance(
             tier="engineering_scaffold",
-            source="MockDoomArena_Raycaster_v1.0",
-            confidence=0.80,
-            rationale="Pure-Python/NumPy 2.5D perspective raycaster arena providing deterministic visual stimulus and combat mechanics for CI and headless testing",
+            source="MockDoomArena_Raycaster_v2.0",
+            confidence=0.85,
+            rationale="Deterministic 2.5D raycaster with corridor navigation tasks, dynamic optical slip, and combat telemetry",
         )
 
         # E1M1 Arena Grid: 0 = floor, 1 = tech wall, 2 = stone wall, 3 = exit gate
@@ -75,16 +76,27 @@ class MockDoomArena:
         ], dtype=np.int32)
         self.map_h, self.map_w = self.map_grid.shape
 
+        # Goal Coordinates (Exit Portal)
+        self.goal_x = 13.5
+        self.goal_y = 12.0
+
         # Agent state
         self.agent_x = 2.5
         self.agent_y = 2.5
-        self.agent_angle = 0.0  # radians, 0 = facing +x (east)
+        self.agent_angle = 0.0
         self.health = 100.0
         self.ammo = 50
         self.kills = 0
         self.damage_dealt = 0.0
+        self.damage_taken = 0.0
+        self.shots_fired = 0
         self.step_count = 0
         self.distance_traveled = 0.0
+        self.wall_bumps = 0
+        self.exit_reached = False
+        self.initial_dist_to_goal = math.hypot(self.goal_x - 2.5, self.goal_y - 2.5)
+        self.min_dist_to_goal = self.initial_dist_to_goal
+
         self.imps: List[ImpEntity] = []
         self.rng = np.random.RandomState(42)
 
@@ -100,10 +112,16 @@ class MockDoomArena:
         self.ammo = 50
         self.kills = 0
         self.damage_dealt = 0.0
+        self.damage_taken = 0.0
+        self.shots_fired = 0
         self.step_count = 0
         self.distance_traveled = 0.0
+        self.wall_bumps = 0
+        self.exit_reached = False
+        self.initial_dist_to_goal = math.hypot(self.goal_x - 2.5, self.goal_y - 2.5)
+        self.min_dist_to_goal = self.initial_dist_to_goal
 
-        # Spawn imps in open areas
+        # Spawn imps along the corridor to the exit
         self.imps = []
         spawn_locs = [
             (6.5, 3.5, 0.04, 0.02),
@@ -126,6 +144,7 @@ class MockDoomArena:
         turn_speed = 0.12  # ~6.8 degrees per step
 
         prev_x, prev_y = self.agent_x, self.agent_y
+        prev_dist_to_goal = math.hypot(self.goal_x - self.agent_x, self.goal_y - self.agent_y)
 
         # Execute agent action
         if action_int == DoomAction.FORWARD:
@@ -136,22 +155,35 @@ class MockDoomArena:
                 self.agent_y = ny
                 dist = math.hypot(self.agent_x - prev_x, self.agent_y - prev_y)
                 self.distance_traveled += dist
-                reward += dist * 0.5  # Exploration reward
+
+                # Directed navigation progress reward
+                curr_dist_to_goal = math.hypot(self.goal_x - self.agent_x, self.goal_y - self.agent_y)
+                nav_gain = prev_dist_to_goal - curr_dist_to_goal
+                reward += nav_gain * 2.0  # Reward moving toward goal
+                if curr_dist_to_goal < self.min_dist_to_goal:
+                    self.min_dist_to_goal = curr_dist_to_goal
+            else:
+                self.wall_bumps += 1
+                reward -= 0.1  # Slight wall collision penalty
 
         elif action_int == DoomAction.TURN_LEFT:
             self.agent_angle -= turn_speed
+            reward -= 0.01  # Small turning cost to discourage aimless stationary spinning
 
         elif action_int == DoomAction.TURN_RIGHT:
             self.agent_angle += turn_speed
+            reward -= 0.01
 
         elif action_int == DoomAction.FIRE:
             if self.ammo > 0:
                 self.ammo -= 1
-                # Check hitscan line-of-sight to imps within conical targeting zone
+                self.shots_fired += 1
                 hit_damage = self._perform_hitscan()
                 if hit_damage > 0:
                     self.damage_dealt += hit_damage
                     reward += hit_damage * 1.0
+                else:
+                    reward -= 0.05  # Miss penalty
 
         # Keep angle in [-pi, pi]
         self.agent_angle = (self.agent_angle + math.pi) % (2.0 * math.pi) - math.pi
@@ -160,22 +192,18 @@ class MockDoomArena:
         for imp in self.imps:
             if not imp.is_alive:
                 continue
-            # Simple patrol / seek
             dx = self.agent_x - imp.x
             dy = self.agent_y - imp.y
             dist_to_agent = math.hypot(dx, dy)
 
             if dist_to_agent < 5.0:
-                # Seek agent slowly
                 imp.vx = (dx / dist_to_agent) * 0.05
                 imp.vy = (dy / dist_to_agent) * 0.05
             else:
-                # Bounce around patrol velocity
                 if self.rng.rand() < 0.05:
                     imp.vx = float(self.rng.uniform(-0.04, 0.04))
                     imp.vy = float(self.rng.uniform(-0.04, 0.04))
 
-            # Move imp with boundary check
             new_ix = imp.x + imp.vx
             new_iy = imp.y + imp.vy
             if not self._is_wall(new_ix, new_iy):
@@ -189,6 +217,7 @@ class MockDoomArena:
             if dist_to_agent < 0.8:
                 dmg = 2.0
                 self.health -= dmg
+                self.damage_taken += dmg
                 reward -= dmg * 0.5
 
         # Check death or completion
@@ -201,16 +230,27 @@ class MockDoomArena:
         elif self.map_grid[int(self.agent_y), int(self.agent_x)] == 3:
             # Reached exit portal!
             reward += 100.0
+            self.exit_reached = True
             done = True
 
         obs = self._get_obs(done=done)
+        curr_dist = math.hypot(self.goal_x - self.agent_x, self.goal_y - self.agent_y)
+        nav_progress = (self.initial_dist_to_goal - curr_dist) / max(0.1, self.initial_dist_to_goal)
+
         info = {
             "health": self.health,
             "ammo": self.ammo,
             "kills": self.kills,
             "damage_dealt": self.damage_dealt,
+            "damage_taken": self.damage_taken,
+            "shots_fired": self.shots_fired,
             "distance_traveled": self.distance_traveled,
+            "dist_to_goal": curr_dist,
+            "min_dist_to_goal": self.min_dist_to_goal,
+            "nav_progress": nav_progress,
+            "exit_reached": self.exit_reached,
             "step_count": self.step_count,
+            "wall_bumps": self.wall_bumps,
         }
         return obs, reward, done, info
 
@@ -245,7 +285,6 @@ class MockDoomArena:
             target_angle = math.atan2(dy, dx)
             angle_diff = (target_angle - self.agent_angle + math.pi) % (2.0 * math.pi) - math.pi
 
-            # Hitscan hit cone within ±0.20 radians (~11 degrees)
             if abs(angle_diff) < 0.20:
                 dmg = 25.0
                 imp.health -= dmg
@@ -253,7 +292,7 @@ class MockDoomArena:
                 if imp.health <= 0.0:
                     imp.is_alive = False
                     self.kills += 1
-                break  # Hit nearest imp
+                break
         return total_dmg
 
     def _render_scene(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -261,21 +300,19 @@ class MockDoomArena:
         rgb = np.zeros((self.height_px, self.width_px, 3), dtype=np.uint8)
         depth = np.full((self.height_px, self.width_px), 20.0, dtype=np.float32)
 
-        # Sky / ceiling (dark slate blue)
+        # Sky / ceiling
         rgb[: self.height_px // 2, :] = [20, 25, 35]
-        # Floor (dark industrial grey)
+        # Floor
         rgb[self.height_px // 2 :, :] = [45, 45, 50]
 
         half_fov = self.fov_rad / 2.0
         angles = np.linspace(self.agent_angle - half_fov, self.agent_angle + half_fov, self.width_px)
-
         wall_distances = np.zeros(self.width_px, dtype=np.float32)
 
         for col, ray_angle in enumerate(angles):
             cos_a = math.cos(ray_angle)
             sin_a = math.sin(ray_angle)
 
-            # DDA raymarching
             step_size = 0.05
             dist = 0.0
             hit_wall = 0
@@ -294,32 +331,26 @@ class MockDoomArena:
                     hit_wall = 1
                     break
 
-            # Fish-eye correction
             corrected_dist = dist * math.cos(ray_angle - self.agent_angle)
             wall_distances[col] = corrected_dist
 
-            # Wall slice height in screen pixels
             wall_height = int(min(self.height_px, (self.height_px / (corrected_dist + 0.001)) * 1.2))
             top = max(0, (self.height_px - wall_height) // 2)
             bottom = min(self.height_px, (self.height_px + wall_height) // 2)
 
-            # Wall color & shading with distance attenuation
             shade = max(0.2, 1.0 - (corrected_dist / 12.0))
             if hit_wall == 1:
-                # Tech wall: cyan/grey tint
                 base_c = np.array([80, 110, 130], dtype=np.float32)
             elif hit_wall == 2:
-                # Stone wall: reddish brick
                 base_c = np.array([120, 70, 60], dtype=np.float32)
             else:
-                # Exit portal: glowing green
                 base_c = np.array([50, 220, 100], dtype=np.float32)
 
             c_shaded = (base_c * shade).clip(0, 255).astype(np.uint8)
             rgb[top:bottom, col] = c_shaded
             depth[top:bottom, col] = corrected_dist
 
-        # Render Imps as billboards
+        # Render Imps
         for imp in self.imps:
             if not imp.is_alive:
                 continue
@@ -333,7 +364,6 @@ class MockDoomArena:
             angle_diff = (imp_angle - self.agent_angle + math.pi) % (2.0 * math.pi) - math.pi
 
             if abs(angle_diff) < half_fov:
-                # Screen x column
                 screen_x = int(((angle_diff + half_fov) / self.fov_rad) * self.width_px)
                 imp_screen_h = int(min(self.height_px, (self.height_px / dist_to_imp) * 0.9))
                 imp_screen_w = max(2, int(imp_screen_h * 0.6))
@@ -343,14 +373,11 @@ class MockDoomArena:
                 left = max(0, screen_x - imp_screen_w // 2)
                 right = min(self.width_px, screen_x + imp_screen_w // 2)
 
-                # Render if not occluded by wall
                 for c in range(left, right):
                     if dist_to_imp < wall_distances[c]:
-                        # Imp skin + bright demon eyes
                         imp_c = np.array(imp.color_rgb, dtype=np.uint8)
                         rgb[top:bottom, c] = imp_c
                         depth[top:bottom, c] = dist_to_imp
-                        # Glowing eyes in upper third
                         eye_row = top + int((bottom - top) * 0.25)
                         if 0 <= eye_row < self.height_px:
                             rgb[eye_row, c] = [255, 60, 20]

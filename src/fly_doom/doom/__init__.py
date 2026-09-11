@@ -6,6 +6,7 @@ from fly_doom.doom.vizdoom_wrapper import VizDoomEnvironment
 from fly_doom.doom.benchmark import (
     Doom001Benchmark,
     Doom002Benchmark,
+    Doom003Benchmark,
     EpisodeResult,
     BenchmarkSummary,
     TrajectoryTick,
@@ -19,6 +20,7 @@ __all__ = [
     "VizDoomEnvironment",
     "Doom001Benchmark",
     "Doom002Benchmark",
+    "Doom003Benchmark",
     "EpisodeResult",
     "BenchmarkSummary",
     "TrajectoryTick",

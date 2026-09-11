@@ -1,0 +1,321 @@
+{
+  "benchmark": "DOOM-003-MOCK",
+  "benchmark_type": "task_competence_and_disentangled_metrics",
+  "protocol_version": "3.0",
+  "timestamp": 1789164345,
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004,
+    1005,
+    1006,
+    1007,
+    1008,
+    1009,
+    1010
+  ],
+  "max_steps": 250,
+  "controllers": {
+    "RandomController": {
+      "flydoom_fitness_score_mean": 289.292,
+      "flydoom_fitness_score_sem": 59.699,
+      "navigation": {
+        "nav_progress_mean_pct": 8.762,
+        "nav_progress_sem": 2.023,
+        "distance_traveled_mean": 2.565,
+        "distance_traveled_sem": 0.165,
+        "min_dist_to_goal_mean": 13.169,
+        "wall_bumps_mean": 31.3,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 1.4,
+        "kills_sem": 0.371,
+        "damage_dealt_mean": 120.0,
+        "damage_dealt_sem": 23.214,
+        "hit_accuracy_mean": 0.116,
+        "hit_accuracy_sem": 0.025
+      },
+      "survival": {
+        "survival_steps_mean": 236.3,
+        "survival_steps_sem": 13.7,
+        "health_mean": 90.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.0,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "BallisticForwardController": {
+      "flydoom_fitness_score_mean": 193.77,
+      "flydoom_fitness_score_sem": 12.5,
+      "navigation": {
+        "nav_progress_mean_pct": 10.44,
+        "nav_progress_sem": 0.0,
+        "distance_traveled_mean": 2.1,
+        "distance_traveled_sem": 0.0,
+        "min_dist_to_goal_mean": 13.02,
+        "wall_bumps_mean": 186.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.9,
+        "kills_sem": 0.1,
+        "damage_dealt_mean": 72.5,
+        "damage_dealt_sem": 2.5,
+        "hit_accuracy_mean": 0.058,
+        "hit_accuracy_sem": 0.002
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.0,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "ModelA_PointLIF": {
+      "flydoom_fitness_score_mean": 258.323,
+      "flydoom_fitness_score_sem": 39.701,
+      "navigation": {
+        "nav_progress_mean_pct": 9.645,
+        "nav_progress_sem": 0.37,
+        "distance_traveled_mean": 1.995,
+        "distance_traveled_sem": 0.063,
+        "min_dist_to_goal_mean": 13.093,
+        "wall_bumps_mean": 0.5,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 1.2,
+        "kills_sem": 0.249,
+        "damage_dealt_mean": 107.5,
+        "damage_dealt_sem": 15.833,
+        "hit_accuracy_mean": 0.154,
+        "hit_accuracy_sem": 0.022
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.6913,
+        "spike_rate_mean": 0.0528
+      }
+    },
+    "ModelB_TemporalPointLIF": {
+      "flydoom_fitness_score_mean": 26.804,
+      "flydoom_fitness_score_sem": 0.216,
+      "navigation": {
+        "nav_progress_mean_pct": 3.096,
+        "nav_progress_sem": 0.376,
+        "distance_traveled_mean": 0.51,
+        "distance_traveled_sem": 0.056,
+        "min_dist_to_goal_mean": 14.083,
+        "wall_bumps_mean": 0.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.9068,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "ModelC_PassiveTree": {
+      "flydoom_fitness_score_mean": 49.271,
+      "flydoom_fitness_score_sem": 20.338,
+      "navigation": {
+        "nav_progress_mean_pct": 7.337,
+        "nav_progress_sem": 1.579,
+        "distance_traveled_mean": 1.965,
+        "distance_traveled_sem": 0.265,
+        "min_dist_to_goal_mean": 13.365,
+        "wall_bumps_mean": 1.4,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.1,
+        "kills_sem": 0.1,
+        "damage_dealt_mean": 10.0,
+        "damage_dealt_sem": 10.0,
+        "hit_accuracy_mean": 0.067,
+        "hit_accuracy_sem": 0.067
+      },
+      "survival": {
+        "survival_steps_mean": 246.2,
+        "survival_steps_sem": 3.8,
+        "health_mean": 89.6
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.8639,
+        "spike_rate_mean": 0.1333
+      }
+    },
+    "ModelD_ActiveTree": {
+      "flydoom_fitness_score_mean": 26.424,
+      "flydoom_fitness_score_sem": 0.071,
+      "navigation": {
+        "nav_progress_mean_pct": 2.426,
+        "nav_progress_sem": 0.123,
+        "distance_traveled_mean": 0.42,
+        "distance_traveled_sem": 0.02,
+        "min_dist_to_goal_mean": 14.186,
+        "wall_bumps_mean": 0.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.6192,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "ModelD_Mi4_KO": {
+      "flydoom_fitness_score_mean": 31.02,
+      "flydoom_fitness_score_sem": 0.0,
+      "navigation": {
+        "nav_progress_mean_pct": 9.79,
+        "nav_progress_sem": 0.0,
+        "distance_traveled_mean": 2.25,
+        "distance_traveled_sem": 0.0,
+        "min_dist_to_goal_mean": 13.11,
+        "wall_bumps_mean": 227.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.0163,
+        "spike_rate_mean": 0.664
+      }
+    },
+    "ModelD_Mi9_KO": {
+      "flydoom_fitness_score_mean": 25.93,
+      "flydoom_fitness_score_sem": 0.0,
+      "navigation": {
+        "nav_progress_mean_pct": 1.55,
+        "nav_progress_sem": 0.0,
+        "distance_traveled_mean": 0.3,
+        "distance_traveled_sem": 0.0,
+        "min_dist_to_goal_mean": 14.31,
+        "wall_bumps_mean": 0.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.6057,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "ModelD_Tm3_KO": {
+      "flydoom_fitness_score_mean": 26.424,
+      "flydoom_fitness_score_sem": 0.071,
+      "navigation": {
+        "nav_progress_mean_pct": 2.426,
+        "nav_progress_sem": 0.123,
+        "distance_traveled_mean": 0.42,
+        "distance_traveled_sem": 0.02,
+        "min_dist_to_goal_mean": 14.186,
+        "wall_bumps_mean": 0.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.6438,
+        "spike_rate_mean": 0.0
+      }
+    },
+    "ModelD_Mi1_KO": {
+      "flydoom_fitness_score_mean": 26.424,
+      "flydoom_fitness_score_sem": 0.071,
+      "navigation": {
+        "nav_progress_mean_pct": 2.426,
+        "nav_progress_sem": 0.123,
+        "distance_traveled_mean": 0.42,
+        "distance_traveled_sem": 0.02,
+        "min_dist_to_goal_mean": 14.186,
+        "wall_bumps_mean": 0.0,
+        "exit_rate": 0.0
+      },
+      "combat": {
+        "kills_mean": 0.0,
+        "kills_sem": 0.0,
+        "damage_dealt_mean": 0.0,
+        "damage_dealt_sem": 0.0,
+        "hit_accuracy_mean": 0.0,
+        "hit_accuracy_sem": 0.0
+      },
+      "survival": {
+        "survival_steps_mean": 250.0,
+        "survival_steps_sem": 0.0,
+        "health_mean": 100.0
+      },
+      "neural": {
+        "std_norm_asymmetry_mean": 0.6442,
+        "spike_rate_mean": 0.0
+      }
+    }
+  }
+}
