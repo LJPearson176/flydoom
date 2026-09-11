@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlyDoom Observatory</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./overrides.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="eyebrow"><span class="pulse-dot"></span> FlyDoom / embodied computation lab</div>
+          <h1>OBSERVATORY <span>01</span></h1>
+        </div>
+        <div class="run-meta">
+          <div><span class="meta-label">RUN</span> <strong>1C-0042</strong></div>
+          <div class="live-status"><span class="status-dot"></span><strong id="runState">LIVE</strong></div>
+          <div><span class="meta-label">SPEED</span> <strong id="speedLabel">1×</strong></div>
+          <button class="icon-button" id="pauseButton" aria-label="Pause replay">Ⅱ</button>
+        </div>
+      </header>
+
+      
+      <div class="model-status-banner" id="modelStatusBanner">
+        <div class="model-status-badge">
+          <span class="warning-dot"></span>
+          <span>MODEL STATUS: <strong>SYNTHETIC CANONICAL T4</strong></span>
+        </div>
+        <div class="model-status-desc">
+          Not derived from MaleCNS EM data. Used for hypothesis testing. 110 synthetic contacts, 4 cell types.
+        </div>
+        <div class="model-status-switch">
+          <button class="active" id="statusSyntheticBtn">SYNTHETIC (1C-HYP)</button>
+          <button id="statusRealBtn">MALECNS EM (1C-A)</button>
+        </div>
+      </div>
+      <div class="subbar">
+        <span>PHASE 1C</span><i></i><span>T4a ANATOMICAL MODEL</span><i></i><span>MaleCNS v1.0</span><i></i><span>SEED 18472</span>
+        <div class="subbar-right"><span class="provenance-key biological">BIOLOGICAL</span><span class="provenance-key hypothesis">HYPOTHESIS</span><span class="provenance-key engineering">ENGINEERING</span></div>
+      </div>
+
+      <nav class="mode-tabs" aria-label="Observatory modes">
+        <button class="mode-tab active">Observe</button><button class="mode-tab">Brain</button><button class="mode-tab">Retina</button><button class="mode-tab">Experiment</button><button class="mode-tab">Compare</button><button class="mode-tab">Replay</button><button class="mode-tab">Anatomy</button>
+      </nav>
+
+      <section class="cockpit-grid">
+        <section class="panel environment-panel">
+          <div class="panel-heading"><span><span class="panel-index">01</span> ENVIRONMENT</span><span class="camera-chip">OBSERVER CAMERA</span></div>
+          <div class="doom-view" id="doomView">
+            <div class="doom-grid"></div><div class="crosshair"></div><div class="doom-label">DOOM / E1M1</div>
+            <div class="enemy imp"><span class="imp-eye left"></span><span class="imp-eye right"></span><span class="imp-mouth"></span></div>
+            <div class="damage-vignette"></div><div class="camera-readout">FOV 90° <span>·</span> FRAME 1842</div>
+          </div>
+          <div class="env-stats"><div><span>HEALTH</span><strong>72</strong><em>+4</em></div><div><span>AMMO</span><strong>34</strong></div><div><span>ENEMY</span><strong>01</strong></div></div>
+          <button class="outline-button" id="cameraButton">SWITCH TO FLY-EYE <span>↗</span></button>
+        </section>
+
+        <section class="panel fly-panel">
+          <div class="panel-heading"><span><span class="panel-index">02</span> EMBODIED FLY</span><span class="signal-label"><span class="status-dot"></span> SIGNAL PROPAGATING</span></div>
+          <div class="fly-stage">
+            <div class="field-label top">SENSORY FIELD</div><div class="optic-ring"></div>
+            <div class="brain-node optic"><span>OPTIC<br />LOBES</span><b></b></div><div class="brain-node central"><span>CENTRAL<br />BRAIN</span><b></b></div><div class="brain-node vnc"><span>VNC / DN</span><b></b></div>
+            <div class="neural-line line-a"></div><div class="neural-line line-b"></div><div class="neural-line line-c"></div>
+            <div class="motor-row"><div><span class="motor-side">LEFT MOTOR</span><strong id="leftMotor">0.14</strong><div class="motor-bar"><i style="width:14%"></i></div></div><div class="motor-arrow">↘</div><div><span class="motor-side">RIGHT MOTOR</span><strong id="rightMotor">0.82</strong><div class="motor-bar right"><i style="width:82%"></i></div></div></div>
+            <div class="action-readout"><span>ACTION OUTPUT</span><strong id="actionOutput">TURN RIGHT</strong><small>Δ motor asymmetry +0.68</small></div>
+          </div>
+          <div class="fly-footer"><span>AGENT <strong>F-0042</strong></span><span>BODY AXIS <strong>+31.4°</strong></span><span>CONNECTIONS <strong>12,804</strong></span></div>
+        </section>
+
+        <section class="panel neural-panel">
+          <div class="panel-heading"><span><span class="panel-index">03</span> NEURAL STATE</span><button class="mini-button">POPULATION ▾</button></div>
+          <div class="activity-list"><div class="activity-row"><div><strong>T4a</strong><small>ON direction</small></div><div class="activity-track"><i style="width:77%"></i></div><b>0.71</b></div><div class="activity-row"><div><strong>T5a</strong><small>OFF direction</small></div><div class="activity-track"><i class="orange" style="width:18%"></i></div><b>0.08</b></div><div class="activity-row"><div><strong>DNpe017</strong><small>turn right</small></div><div class="activity-track"><i class="blue" style="width:82%"></i></div><b>0.82</b></div></div>
+          <div class="chart-block"><div class="chart-title"><span>SPIKE RASTER</span><span class="chart-legend"><i></i> T4 <i class="orange-dot"></i> T5</span></div><div class="raster" id="raster"></div><div class="axis"><span>700</span><span>750</span><span>800</span><span>843 ms</span></div></div>
+          <div class="direction-block"><div class="chart-title"><span>DESCENDING ASYMMETRY</span><span>PD 92°</span></div><div class="direction-meter"><span>L</span><div><i style="left:78%"></i></div><span>R</span></div><div class="direction-labels"><span>LEFT 0.14</span><span>RIGHT 0.82</span></div></div>
+        </section>
+
+        <section class="panel retina-panel">
+          <div class="panel-heading"><span><span class="panel-index">04</span> FLY-EYE / RETINA</span><span class="camera-chip">DELTA ENCODER</span></div>
+          <div class="retina-view"><div class="retina-grid"></div><div class="retina-orb"></div><span class="retina-cross">+</span><span class="retina-axis x">θ</span><span class="retina-axis y">φ</span></div>
+          <div class="retina-controls"><button class="seg active">RAW</button><button class="seg">OMMATIDIA</button><button class="seg">ON/OFF</button><button class="seg">MOTION</button></div>
+          <div class="retina-inspector"><div class="inspector-title">OMMATIDIUM <strong>#482</strong><span class="provenance-key engineering">ENCODED</span></div><div class="inspector-grid"><span>θ <b>31.4°</b></span><span>φ <b>-12.8°</b></span><span>LUMINANCE <b>0.71</b></span><span>ΔI <b class="orange-text">+0.18</b></span></div><div class="downstream"><span>DOWNSTREAM</span><b>L1 <i>0.43</i></b><b>Mi1 <i>0.19</i></b><b>T4a <i>0.27</i></b></div></div>
+        </section>
+
+        <section class="panel telemetry-panel">
+          <div class="panel-heading"><span><span class="panel-index">05</span> CAUSAL TRACE</span><button class="mini-button" id="traceButton">TRACE FIRE ↗</button></div>
+          <div class="trace-chain"><div class="trace-node">DOOM TARGET<small>pixel region #421–453</small></div><span>↑</span><div class="trace-node">OMMATIDIA<small>luminance Δ +0.18</small></div><span>↑</span><div class="trace-node active-node">T4a CLUSTER<small>motion energy 0.71</small></div><span>↑</span><div class="trace-node">DNpe017<small>right bias 0.82</small></div><span>↑</span><div class="trace-node action-node">FIRE / TURN RIGHT<small>latency 24 ms</small></div></div>
+          <div class="telemetry-footer"><div><span>LATENCY</span><strong>24 ms</strong></div><div><span>SPIKES</span><strong>814</strong></div><div><span>DSI</span><strong>0.18</strong></div></div>
+        </section>
+      </section>
+
+      <!-- ANATOMY MODE VIEW -->
+      <section class="anatomy-container" id="anatomyContainer">
+        <!-- Left: Visual Field & Receptive Field Mapping -->
+        <section class="panel">
+          <div class="panel-heading">
+            <span><span class="panel-index">A1</span> VISUAL FIELD & RETINOTOPY</span>
+            <span class="camera-chip">T4a RECEPTIVE FIELD</span>
+          </div>
+          <div class="visual-field-canvas" id="visualFieldCanvas">
+            <div class="retinotopic-grid" id="retinotopicGrid"></div>
+            <div class="drifting-bar"></div>
+            <div class="doom-label">STIMULUS: DRIFTING GRATING (0° RIGHT)</div>
+            <div class="camera-readout">RETINA: <strong>DELTA ENCODER</strong> · 16 COLUMNS</div>
+          </div>
+          <div class="env-stats">
+            <div><span>MAPPED COLS</span><strong>6, 8, 10</strong><em>T4a span</em></div>
+            <div><span>INPUT TYPES</span><strong>4</strong><em>Mi4, Mi9, Mi1, Tm3</em></div>
+            <div><span>TOTAL CONTACTS</span><strong>110</strong></div>
+          </div>
+        </section>
+
+        <!-- Center: 3D T4a Dendritic Arborization -->
+        <section class="panel">
+          <div class="panel-heading">
+            <span><span class="panel-index">A2</span> 3D T4a DENDRITIC ARBORIZATION</span>
+            <span class="signal-label"><span class="status-dot"></span> 110 SYNAPSES MAPPED</span>
+          </div>
+          <div class="arbor-stage" id="arborStage">
+            <svg id="arborSvg" viewBox="-15 -15 30 30">
+              <!-- Coordinate Grid -->
+              <circle cx="0" cy="0" r="12" fill="none" stroke="#162a33" stroke-dasharray="1,2" stroke-width="0.3"/>
+              <circle cx="0" cy="0" r="6" fill="none" stroke="#162a33" stroke-dasharray="1,2" stroke-width="0.3"/>
+              <line x1="-14" y1="0" x2="14" y2="0" stroke="#1f3d48" stroke-width="0.4"/>
+              <line x1="0" y1="-14" x2="0" y2="14" stroke="#1f3d48" stroke-width="0.4"/>
+              <text x="11" y="-1" font-size="1.6" fill="#58dfc2" font-family="monospace">+x (0° PD)</text>
+              <text x="-14" y="-1" font-size="1.6" fill="#d07af5" font-family="monospace">-x (Null)</text>
+
+              <!-- Soma -->
+              <circle cx="0" cy="4" r="1.8" fill="#11252d" stroke="#58dfc2" stroke-width="0.6" id="somaNode"/>
+              <text x="-2" y="7.5" font-size="1.6" fill="#bcc7c0" font-family="monospace">SOMA / SIZ</text>
+
+              <!-- Main Dendritic Trunk -->
+              <path d="M 0,2.2 L 0,-1.5" stroke="#317f79" stroke-width="2.4" class="dendrite-branch" data-branch="trunk"/>
+
+              <!-- Leading Branch (Null Inhibition: Mi4 base, Mi9 tips) -->
+              <path d="M 0,-1.5 Q -3,-2.5 -5.5,-3.8" stroke="#d07af5" stroke-width="2.0" class="dendrite-branch" data-branch="leading" id="branchLeading"/>
+              <path d="M -5.5,-3.8 L -8.2,-5.0" stroke="#f5d76e" stroke-width="1.4" class="dendrite-branch" data-branch="leading_tip" id="branchLeadingTip"/>
+
+              <!-- Central Branch (Base Excitation: Mi1) -->
+              <path d="M 0,-1.5 L 0.2,-7.0" stroke="#58dfc2" stroke-width="2.2" class="dendrite-branch" data-branch="central" id="branchCentral"/>
+
+              <!-- Trailing Branch (Delayed Excitation: Tm3) -->
+              <path d="M 0,-1.5 Q 3,-2.5 5.8,-4.2" stroke="#f0a65a" stroke-width="2.0" class="dendrite-branch" data-branch="trailing" id="branchTrailing"/>
+
+              <!-- Dynamic Synapses Group -->
+              <g id="synapsesGroup"></g>
+            </svg>
+          </div>
+          <div class="fly-footer">
+            <span>AXIS <strong>X-ALIGNED (0° PREF)</strong></span>
+            <span>SPAN <strong>12.3 μm</strong></span>
+            <span>COMPARTMENTS <strong>3 ACTIVE</strong></span>
+          </div>
+        </section>
+
+        <!-- Right: Presynaptic Partner Filter & Synapse List -->
+        <section class="panel">
+          <div class="panel-heading">
+            <span><span class="panel-index">A3</span> PRESYNAPTIC SYNAPSE LIST</span>
+            <span class="camera-chip" id="partnerCountBadge">110 CONTACTS</span>
+          </div>
+          <div class="partner-filter-row">
+            <button class="partner-pill active" data-partner="all">ALL (110)</button>
+            <button class="partner-pill mi9" data-partner="Mi9">Mi9 (15)</button>
+            <button class="partner-pill mi1" data-partner="Mi1">Mi1 (40)</button>
+            <button class="partner-pill tm3" data-partner="Tm3">Tm3 (35)</button>
+            <button class="partner-pill mi4" data-partner="Mi4">Mi4 (20)</button>
+          </div>
+          <div class="synapse-table-container">
+            <table class="synapse-table">
+              <thead>
+                <tr><th>ID</th><th>PRE</th><th>COMP</th><th>X (μm)</th><th>NT</th></tr>
+              </thead>
+              <tbody id="synapseTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Bottom Full-Width: Synapse/Branch Inspector & Multi-Model Progression -->
+        <section class="panel" style="grid-column: 1 / -1;">
+          <div class="panel-heading">
+            <span><span class="panel-index">A4</span> ANATOMICAL & EPISTEMIC PROVENANCE INSPECTOR</span>
+            <div class="model-progression-tabs">
+              <span style="font-size:9px;color:var(--muted);align-self:center;margin-right:4px;">MODEL EVALUATOR:</span>
+              <button class="model-tab-btn" data-model="model_a">MODEL A (POINT)</button>
+              <button class="model-tab-btn" data-model="model_b">MODEL B (TEMPORAL)</button>
+              <button class="model-tab-btn" data-model="model_c">MODEL C (PASSIVE TREE)</button>
+              <button class="model-tab-btn active" data-model="model_d">MODEL D (NONLINEAR TREE)</button>
+            </div>
+          </div>
+          <div class="inspector-panel-grid">
+            <!-- Col 1: Selected Element Summary -->
+            <div class="inspector-section">
+              <div class="inspector-title" id="inspectorTitle">SELECTED ELEMENT: <strong>Mi9 TIP SYNAPSE #14</strong></div>
+              <div class="inspector-grid" id="inspectorDetails">
+                <span>PRE-TYPE: <b>Mi9 (Column 6)</b></span>
+                <span>COMPARTMENT: <b>Leading Distal Tip</b></span>
+                <span>COORDINATES: <b>(-4.21, -0.42, 1.18) μm</b></span>
+                <span>TRANSMITTER: <b class="orange-text">Glutamate (Inhibitory GluCl)</b></span>
+                <span>DELAY / TAU: <b>τ_syn = 40.0 ms</b></span>
+                <span>RECEPTIVE FIELD: <b>Visual Column 6 (Ommatidium #486)</b></span>
+              </div>
+            </div>
+
+            <!-- Col 2: Epistemic Provenance Card -->
+            <div class="inspector-section">
+              <div class="inspector-title">PROVENANCE AUDIT & SOURCE VERIFICATION</div>
+              <div class="provenance-card" id="provenanceCard">
+                <span class="provenance-tier-tag hypothesis" id="provTierBadge">COMPUTATIONAL_HYPOTHESIS</span>
+                <div style="color:var(--muted);line-height:1.5;">
+                  <div>SOURCE: <strong id="provSource" style="color:var(--text);">Synthetic_Canonical_T4a_Model</strong></div>
+                  <div>RATIONALE: <span id="provRationale">Parameterized hypothesis testing of distal tip inhibition based on Takemura et al. (2017) and Strother et al. (2017).</span></div>
+                  <div>DOI: <a id="provDoi" href="#" style="color:var(--cyan);text-decoration:none;">10.1038/s41586-025-09276-5</a> · EXTRACT STATUS: <em style="color:var(--amber);font-style:normal;">Pending MaleCNS EM extraction (Phase 1C-A)</em></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 3: Live Model Electrophysiology Readout -->
+            <div class="inspector-section">
+              <div class="inspector-title">ACTIVE MODEL PERFORMANCE (MODEL D)</div>
+              <div class="env-stats" style="padding:8px 0;gap:18px;">
+                <div><span>DISCRETE DSI</span><strong id="activeDsi" style="color:var(--cyan);">0.5902</strong><em>PASS</em></div>
+                <div><span>MODULATION</span><strong id="activeMi">1.000</strong><em>Zero baseline</em></div>
+                <div><span>VECTOR V</span><strong id="activeVector">0.4513</strong><em>Tuned</em></div>
+              </div>
+              <div class="downstream" style="margin-top:2px;">
+                <span>TUNING CURVE:</span>
+                <b id="activeCurve" style="font-size:9px;color:var(--muted);">[25, 19, 0, 84, 97, 84, 0, 33]</b>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="timeline-panel panel">
+        <div class="timeline-top"><div class="panel-heading"><span><span class="panel-index">06</span> TIME / EXPERIMENT REPLAY</span><span class="timeline-status">SYNCHRONIZED · 4 CLOCKS</span></div><div class="replay-controls"><button>↶</button><button id="playButton">▶</button><button>↷</button><button class="speed-button">1× ▾</button></div></div>
+        <div class="timeline"><div class="timeline-track"><div class="timeline-progress" id="timelineProgress"></div><button class="timeline-handle" id="timelineHandle" aria-label="Current replay time"></button><div class="event-marker stimulus" style="left:22%"><span>stimulus</span></div><div class="event-marker peak" style="left:56%"><span>neural peak</span></div><div class="event-marker action" style="left:72%"><span>action</span></div></div><div class="timeline-scale"><span>-120 ms</span><span>0 ms</span><span>400 ms</span><span>843 ms</span><span>1000 ms</span></div></div>
+        <div class="clock-strip"><span><i class="clock game"></i> GAME <b>29</b></span><span><i class="clock neural"></i> NEURAL <b>843.0 ms</b></span><span><i class="clock visual"></i> VISUAL <b>1842</b></span><span><i class="clock observation"></i> OBSERVATION <b>60 fps</b></span><span class="current-event">CURRENT EVENT <b>TURN_RIGHT</b></span></div>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
