@@ -189,8 +189,7 @@ def main() -> None:
     recon = build_canonical_t4a_reconstruction(seed=42)
     graph, meta = recon.to_connectome_graph()
 
-    print(f"
-[1/4] Extracted Anatomical T4a: ID={recon.target_cell_id}, Synapses={recon.total_synapses}")
+    print(f"\n[1/4] Extracted Anatomical T4a: ID={recon.target_cell_id}, Synapses={recon.total_synapses}")
     print(f"  Presynaptic Partners: {recon.presynaptic_counts_by_type}")
     print(f"  Compartment Mapping:  {recon.presynaptic_counts_by_compartment}")
 
@@ -212,8 +211,7 @@ def main() -> None:
     x_trail = comp_centroids["trailing"][0]
     segregation_pass = bool(x_lead < x_cent < x_trail and (x_trail - x_lead) > 5.0)
 
-    print(f"
-[2/4] Anatomical Gate Verification:")
+    print(f"\n[2/4] Anatomical Gate Verification:")
     print(f"  Gate 1 (malecns_subgraph_integrity):   {'PASS' if integrity_pass else 'FAIL'}")
     print(f"  Gate 2 (spatial_segregation):          {'PASS' if segregation_pass else 'FAIL'} (x: lead={x_lead:.2f}, cent={x_cent:.2f}, trail={x_trail:.2f} um)")
 
@@ -229,8 +227,7 @@ def main() -> None:
     results: Dict[str, DirectionalTuningResult] = {}
     curves: Dict[str, List[float]] = {}
 
-    print(f"
-[3/4] Running Four-Model Electrophysiological Progression across 8 Directions:")
+    print(f"\n[3/4] Running Four-Model Electrophysiological Progression across 8 Directions:")
     for label, m_type in models:
         tuning, curve, latencies = evaluate_t4_model(recon, m_type, params)
         results[m_type.value] = tuning
@@ -254,8 +251,7 @@ def main() -> None:
     delta_nonlinear_tree = dsi_d - dsi_c
     directionality_pass = bool(dsi_d >= 0.40 and dsi_d > (dsi_a + 0.25))
 
-    print(f"
-[4/4] Dynamic Attribution Analysis:")
+    print(f"\n[4/4] Dynamic Attribution Analysis:")
     print(f"  Reichardt Analytical Control: DSI = {reichardt_dsi:.4f}")
     print(f"  Model A -> Model B (Temporal tuning):    Delta DSI = {dsi_b - dsi_a:+.4f}")
     print(f"  Model B -> Model C (Spatial compartments): Delta DSI = {delta_compartmental:+.4f}")
@@ -334,8 +330,7 @@ def main() -> None:
         connectome_fingerprint=graph.compute_fingerprint(),
     )
 
-    print(f"
-Sealed Phase 1C Experiment Bundle: {output_dir.absolute()}")
+    print(f"\nSealed Phase 1C Experiment Bundle: {output_dir.absolute()}")
 
 
 if __name__ == "__main__":
