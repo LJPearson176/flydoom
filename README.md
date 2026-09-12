@@ -8,6 +8,9 @@
 
 An anatomically and biophysically authentic *Drosophila melanogaster* digital twin that plays classic **DOOM (1993)** in closed loop. Visual inputs from native GZDoom are transduced through a compound eye ommatidial lattice into multi-compartment dendritic motion detectors, routed through central complex navigation compass loops, and mapped onto descending motor neurons actuating keyboard commands in real time.
 
+> [!WARNING]
+> **AI Generation & Hallucination Disclaimer**: This repository, including all codebase files, models, and documentation, was generated with the assistance of artificial intelligence and is subject to potential errors or hallucinations. Take all claims, derivations, and implementations at face value and verify independently before relying on them for scientific or production use.
+
 ---
 
 ![FlyDoom Actual Gameplay & 3D Nervous System Twin](assets/actual_gameplay_3d_twin.gif)
