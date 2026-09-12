@@ -21,3 +21,16 @@ wheels/
 
 # Experiment output bundles
 runs/
+
+# Environment & credentials
+.env
+*.log
+
+# Doom IWADs
+wads/*.wad
+wads/*.WAD
+
+# Scratch & test images
+test_*.png
+test_*.log
+real_gzdoom_*.png

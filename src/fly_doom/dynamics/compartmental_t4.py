@@ -216,11 +216,16 @@ class CompartmentalT4Engine:
             # Model D: Active / nonlinear multi-compartment tree
             # 1. Leading branch has shunting inhibition: local divisive suppression
             shunt = 1.0 / (1.0 + (p.shunting_factor * (self.g_mi4 + self.g_mi9)))
-            self.v_leading = p.v_rest + (self.v_leading - p.v_rest) * self.alpha_branch - (self.g_mi4 + self.g_mi9)
+            # Conductance-based driving force: current diminishes as V approaches reversal potential (-75 mV)
+            inh_df = max(0.0, (self.v_leading - p.e_inh_gaba) / max(1e-3, (p.v_rest - p.e_inh_gaba)))
+            i_inh = (self.g_mi4 + self.g_mi9) * inh_df
+            self.v_leading = max(p.e_inh_gaba, p.v_rest + (self.v_leading - p.v_rest) * self.alpha_branch - i_inh)
 
             # 2. Central & Trailing branches integrate excitation with dendritic coincidence
-            self.v_central = p.v_rest + (self.v_central - p.v_rest) * self.alpha_branch + self.g_mi1
-            self.v_trailing = p.v_rest + (self.v_trailing - p.v_rest) * self.alpha_branch + self.g_tm3
+            exc_cent_df = max(0.0, (p.e_exc - self.v_central) / max(1e-3, (p.e_exc - p.v_rest)))
+            exc_trail_df = max(0.0, (p.e_exc - self.v_trailing) / max(1e-3, (p.e_exc - p.v_rest)))
+            self.v_central = min(p.e_exc, p.v_rest + (self.v_central - p.v_rest) * self.alpha_branch + self.g_mi1 * exc_cent_df)
+            self.v_trailing = min(p.e_exc, p.v_rest + (self.v_trailing - p.v_rest) * self.alpha_branch + self.g_tm3 * exc_trail_df)
 
             # Supralinear coincidence between central and trailing excitation
             exc_coincidence = p.coincidence_gain * max(0.0, self.v_central - p.v_rest) * max(0.0, self.v_trailing - p.v_rest) * 0.05
@@ -228,7 +233,7 @@ class CompartmentalT4Engine:
             # Net forward dendritic transfer is gated by leading shunting inhibition
             # (If null direction moves leading->central, shunt arrives first and quenches excitation)
             i_axial_exc = ((self.v_central - p.v_rest) + (self.v_trailing - p.v_rest) + exc_coincidence) * shunt
-            i_axial_inh = (self.v_leading - p.v_rest)  # Hyperpolarizing component
+            i_axial_inh = (self.v_leading - self.v_soma)  # Hyperpolarizing component relative to soma
 
             i_axial = p.g_axial * (i_axial_exc + i_axial_inh)
 
@@ -237,7 +242,7 @@ class CompartmentalT4Engine:
                 self.v_soma = p.v_reset
                 return False
 
-            self.v_soma = p.v_rest + (self.v_soma - p.v_rest) * self.alpha_soma + i_axial
+            self.v_soma = max(p.e_inh_gaba, min(p.e_exc + 10.0, p.v_rest + (self.v_soma - p.v_rest) * self.alpha_soma + i_axial))
 
         # 4. Spike threshold detection
         if self.v_soma >= p.v_thresh:

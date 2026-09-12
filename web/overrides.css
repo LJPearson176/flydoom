@@ -4,6 +4,10 @@
 .trace-node.trace-flash{animation:traceFlash .6s ease-out}
 @keyframes traceFlash{0%{background:#58dfc235;box-shadow:0 0 24px #58dfc280}100%{background:#0e1d23;box-shadow:none}}
 
+.benchmark-view{display:none;border:1px solid var(--line);background:linear-gradient(145deg,rgba(17,35,43,.96),rgba(8,17,22,.98));padding:22px;margin-bottom:10px}.benchmark-active .benchmark-view{display:block}.benchmark-active .cockpit-grid{display:none}.benchmark-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px}.benchmark-header h2{font-size:25px;font-weight:500;letter-spacing:-.03em;margin:8px 0 4px}.benchmark-header p{color:var(--muted);margin:0;font-size:12px}.benchmark-seal{font:10px 'DM Mono',monospace;letter-spacing:.08em;color:var(--cyan);text-align:right;line-height:1.8}.benchmark-seal small{color:var(--muted);letter-spacing:0;font-size:8px}.metric-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}.metric-cards article{border:1px solid var(--line);padding:14px 15px;background:#0b1920}.metric-cards article.neural-card{border-color:#7c6347;background:#241d16}.metric-cards span,.section-caption{font:9px 'DM Mono',monospace;letter-spacing:.1em;color:var(--muted)}.metric-cards strong{display:block;font-size:27px;color:var(--text);margin:7px 0 3px}.metric-cards strong span{font:12px 'DM Mono',monospace;color:var(--cyan)}.metric-cards small{color:var(--muted);font-size:9px}.benchmark-columns{display:grid;grid-template-columns:1.35fr .65fr;gap:10px}.benchmark-table-wrap,.lesion-panel{border:1px solid var(--line);background:#0b171d}.section-caption{display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}.section-caption span{color:var(--cyan)}.benchmark-table{width:100%;border-collapse:collapse;font:10px 'DM Mono',monospace}.benchmark-table th{color:var(--muted);font-size:8px;font-weight:400;text-align:right;padding:10px 9px;border-bottom:1px solid var(--line)}.benchmark-table th:first-child,.benchmark-table td:first-child{text-align:left}.benchmark-table td{padding:11px 9px;text-align:right;border-bottom:1px solid #172b33;color:var(--text)}.benchmark-table tr:last-child td{border-bottom:0}.benchmark-table .best-control td{color:var(--cyan)}.benchmark-table .active-row td{color:var(--amber);background:#2b2118}.lesion-panel{padding-bottom:15px}.lesion-row{display:grid;grid-template-columns:78px 1fr 67px;gap:8px;align-items:center;padding:15px 14px 3px;font:8px 'DM Mono',monospace;color:var(--muted)}.lesion-row b{font-weight:400;text-align:right;color:var(--text);font-size:8px}.lesion-bar{height:8px;background:#182c34}.lesion-bar i{display:block;height:100%;background:var(--cyan)}.lesion-row.mi4 .lesion-bar i{background:var(--red)}.lesion-callout{border-left:2px solid var(--red);margin:18px 14px 0;padding:8px 10px;background:#201719;color:var(--muted);font-size:10px;line-height:1.45}.lesion-callout strong{color:var(--red);font-family:'DM Mono',monospace;font-size:11px}.lesion-callout b{color:var(--text);font-family:'DM Mono',monospace}.paradox-banner{display:flex;align-items:center;gap:15px;margin-top:10px;padding:15px;border:1px solid #7e6040;background:linear-gradient(90deg,#211a14,#101a1d)}.paradox-icon{font-size:25px;color:var(--amber)}.paradox-banner strong{font:11px 'DM Mono',monospace;color:var(--amber);letter-spacing:.1em}.paradox-banner p{margin:5px 0 0;color:var(--muted);font-size:11px}.paradox-compare{margin-left:auto;display:flex;align-items:center;gap:10px;font:9px 'DM Mono',monospace;color:var(--muted)}.paradox-compare b{display:block;color:var(--text);font-size:13px;margin-top:4px}.paradox-compare i{color:var(--amber)}
+@media(max-width:1250px){.benchmark-columns{grid-template-columns:1fr}.paradox-compare{display:none}}
+.live-frame{position:absolute;z-index:1;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s;background:#101b20}.live-frame.is-live{opacity:1}.doom-view .doom-label,.doom-view .camera-readout,.doom-view .crosshair,.doom-view .damage-vignette{z-index:2}.doom-view .doom-grid,.doom-view .enemy{z-index:1}
+
 /* --- ANATOMY & MODEL STATUS OVERRIDES --- */
 .model-status-banner {
   display: flex;
@@ -69,6 +73,62 @@
 }
 .anatomy-active .anatomy-container {
   display: grid;
+}
+
+/* Full 3D Visible Nervous System & Exoskeleton Twin View */
+.cns-3d-container {
+  display: none;
+  width: 100%;
+  height: calc(100vh - 128px);
+  min-height: 720px;
+  position: relative;
+  background: #050a0e;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.brain-3d-active .cockpit-grid,
+.brain-3d-active .anatomy-container {
+  display: none !important;
+}
+.brain-3d-active .cns-3d-container {
+  display: block !important;
+}
+
+/* In-Situ Isometric 3D Hologram Overlay over Doom Viewport */
+.doom-3d-hologram {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 220px;
+  height: 250px;
+  z-index: 15;
+  pointer-events: auto;
+  cursor: grab;
+  background: radial-gradient(circle at 50% 50%, rgba(6, 18, 26, 0.72) 0%, rgba(3, 8, 12, 0.45) 80%);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 229, 255, 0.1);
+  transition: width 0.25s ease, height 0.25s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+.doom-3d-hologram:active {
+  cursor: grabbing;
+}
+.doom-3d-hologram.is-hidden {
+  display: none !important;
+}
+.doom-3d-hologram.is-full {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 /* Visual Field Panel */
@@ -245,3 +305,135 @@
   color: var(--cyan);
   background: rgba(88, 223, 194, 0.12);
 }
+
+/* --- IN-SITU NEURAL HUD OVERLAY ON GAMEPLAY --- */
+.neural-hud-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.neural-hud-overlay.is-hidden {
+  opacity: 0;
+}
+.hud-layer {
+  transition: all 0.15s ease-out;
+}
+#hudOpticL, #hudOpticR {
+  transition: stroke 0.15s ease, opacity 0.15s ease;
+}
+#hudTargetPointer {
+  transition: transform 0.12s ease-out;
+  transform-origin: center;
+}
+#hudLockRing.locked {
+  stroke: #58dfc2;
+  stroke-width: 3;
+  opacity: 1;
+  animation: lockPulse 0.8s infinite alternate ease-in-out;
+}
+@keyframes lockPulse {
+  0% { transform: scale(0.96); opacity: 0.7; }
+  100% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 8px #58dfc2); }
+}
+#hudActionBadge.action-fire #hudActionBg {
+  stroke: #ff5722;
+  fill: #3b1408;
+  filter: drop-shadow(0 0 12px #ff5722);
+}
+#hudActionBadge.action-fire #hudActionName {
+  fill: #ff8a65;
+}
+#hudActionBadge.action-use #hudActionBg {
+  stroke: #00e5ff;
+  fill: #003740;
+  filter: drop-shadow(0 0 12px #00e5ff);
+}
+#hudActionBadge.action-use #hudActionName {
+  fill: #80d8ff;
+}
+#damageVignette.damage-flash {
+  animation: damagePulse 0.5s ease-out;
+}
+@keyframes damagePulse {
+  0% { box-shadow: inset 0 0 60px rgba(255, 30, 30, 0.85); }
+  100% { box-shadow: none; }
+}
+
+/* Branch-resolved T4 activation mapping.  The labels preserve the model's
+   computational interpretation rather than presenting these traces as
+   directly measured biological voltages. */
+.activation-map {
+  margin: 0 16px 10px;
+  padding: 10px 10px 8px;
+  border: 1px solid #24424a;
+  background: rgba(8, 20, 25, 0.72);
+  font-family: 'DM Mono', monospace;
+}
+.activation-map-heading,
+.activation-columns,
+.activation-row,
+.activation-drives {
+  display: grid;
+  grid-template-columns: 54px repeat(4, 1fr);
+  gap: 5px;
+  align-items: center;
+}
+.activation-map-heading {
+  display: flex;
+  justify-content: space-between;
+  color: var(--cyan);
+  font-size: 8px;
+  letter-spacing: .1em;
+  margin-bottom: 8px;
+}
+.activation-map-heading .provenance-key { font-size: 7px; color: var(--amber); }
+.activation-columns { color: var(--muted); font-size: 6px; line-height: 1.2; margin-bottom: 4px; }
+.activation-row { margin: 5px 0; }
+.activation-row strong { color: var(--text); font-size: 9px; }
+.activation-row i {
+  display: block;
+  height: 8px;
+  min-width: 0;
+  background: linear-gradient(90deg, #19313a, #58dfc2);
+  box-shadow: 0 0 8px #58dfc250;
+  transform-origin: left center;
+}
+.activation-row:nth-of-type(4) i { background: linear-gradient(90deg, #29313c, #71aef5); box-shadow: 0 0 8px #71aef550; }
+.activation-drives { grid-template-columns: 1fr 1fr; color: var(--muted); font-size: 7px; line-height: 1.4; margin-top: 7px; }
+.retinal-drive-readout {
+  display: flex;
+  justify-content: space-between;
+  gap: 7px;
+  border-top: 1px solid #1c353d;
+  margin-top: 7px;
+  padding-top: 6px;
+  color: var(--muted);
+  font-size: 7px;
+}
+.retinal-drive-readout b { color: var(--cyan); font-weight: 400; }
+.activation-trace-wrap {
+  border-top: 1px solid var(--line);
+  padding: 9px 16px 6px;
+}
+.activation-trace-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 76px;
+  margin-top: 6px;
+  background: #0a171c;
+  border: 1px solid #1b343d;
+}
+.trace-legend { color: var(--muted); font-size: 8px; }
+.trace-legend i, .trace-legend b, .trace-legend em {
+  display: inline-block;
+  width: 7px;
+  height: 2px;
+  margin: 0 4px 2px 7px;
+  background: var(--cyan);
+}
+.trace-legend b { background: var(--amber); }
+.trace-legend em { background: #f27663; height: 7px; width: 1px; }

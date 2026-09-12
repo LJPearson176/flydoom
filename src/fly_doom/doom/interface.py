@@ -2,7 +2,7 @@
 
 Defines the standard sensorimotor interface for FlyDoom embodied agents:
   - Observation: RGB retinal frame, Depth map, Health, Ammo, Kill count, Agent pose
-  - Action space: NOOP, FORWARD, TURN_LEFT, TURN_RIGHT, FIRE
+  - Action space: NOOP, FORWARD, TURN_LEFT, TURN_RIGHT, FIRE, USE
   - Step info: step_count, reward, done, and cybernetic telemetry
 """
 
@@ -24,6 +24,7 @@ class DoomAction(IntEnum):
     TURN_LEFT = 2
     TURN_RIGHT = 3
     FIRE = 4
+    USE = 5
 
 
 @dataclass

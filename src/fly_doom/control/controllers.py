@@ -145,9 +145,12 @@ class ControlledT4Controller:
         custom_name: Optional[str] = None,
         width: int = 64,
         height: int = 64,
+        saccade_refractory_ticks: int = 0,
     ):
         self.model_type = model_type
         self.knockouts = synaptic_knockouts or set()
+        self.saccade_refractory_ticks = int(saccade_refractory_ticks)
+        self._saccade_cooldown = 0
 
         ko_str = f"_{'-'.join(sorted(self.knockouts))}_KO" if self.knockouts else ""
         self.name = custom_name or f"T4_{model_type.name}{ko_str}"
@@ -155,9 +158,11 @@ class ControlledT4Controller:
         self.encoder = EncoderDelta(num_columns=8, num_rows=8, field_width_px=width, field_height_px=height)
         self.recon = build_canonical_t4a_reconstruction()
 
+        self.dt_ms = 16.67
+
         # Calibrated biophysical parameters
         self.params = CompartmentalParameters(
-            dt=1.0,
+            dt=self.dt_ms,
             shunting_factor=1.8,
             coincidence_gain=0.75,
             tm3_delay_ms=20.0,
@@ -165,7 +170,6 @@ class ControlledT4Controller:
 
         self.t4_left = CompartmentalT4Engine(self.recon, self.params, model_type=self.model_type)
         self.t4_right = CompartmentalT4Engine(self.recon, self.params, model_type=self.model_type)
-        self.dt_ms = 16.67
         self.last_neural_state: Dict[str, float] = {}
 
     def reset(self) -> None:
@@ -173,10 +177,19 @@ class ControlledT4Controller:
         self.t4_left.reset()
         self.t4_right.reset()
         self.last_neural_state = {}
+        self._saccade_cooldown = 0
 
     def select_action(self, obs: DoomObservation) -> DoomAction:
         # 1. Sensory Projection
         gray = (0.299 * obs.rgb[:, :, 0] + 0.587 * obs.rgb[:, :, 1] + 0.114 * obs.rgb[:, :, 2]) / 255.0
+
+        # Ensure spatial dimensions match encoder field dimensions
+        enc_h, enc_w = self.encoder.field_height, self.encoder.field_width
+        if gray.shape != (enc_h, enc_w):
+            r_idx = np.linspace(0, gray.shape[0] - 1, enc_h).astype(np.int32)
+            c_idx = np.linspace(0, gray.shape[1] - 1, enc_w).astype(np.int32)
+            gray = np.ascontiguousarray(gray[np.ix_(r_idx, c_idx)])
+
         currents = self.encoder.encode_frame(gray, dt_ms=self.dt_ms)
         n_ommatidia = self.encoder.num_ommatidia
         on_currents = currents[:n_ommatidia].reshape(8, 8)
@@ -185,14 +198,16 @@ class ControlledT4Controller:
         left_hemifield = on_currents[:, :4]
         right_hemifield = on_currents[:, 4:]
 
-        in_mi1_l = float(np.mean(left_hemifield[:, 1:3])) if "Mi1" not in self.knockouts else 0.0
-        in_tm3_l = float(np.mean(left_hemifield[:, 2:4])) if "Tm3" not in self.knockouts else 0.0
-        in_mi4_l = float(np.mean(left_hemifield[:, 0:2])) if "Mi4" not in self.knockouts else 0.0
+        # Scale sensory currents into physiological conductance rate units
+        input_scale = 0.05
+        in_mi1_l = float(np.mean(left_hemifield[:, 1:3])) * input_scale if "Mi1" not in self.knockouts else 0.0
+        in_tm3_l = float(np.mean(left_hemifield[:, 2:4])) * input_scale if "Tm3" not in self.knockouts else 0.0
+        in_mi4_l = float(np.mean(left_hemifield[:, 0:2])) * input_scale if "Mi4" not in self.knockouts else 0.0
         in_mi9_l = in_mi4_l * 0.6 if "Mi9" not in self.knockouts else 0.0
 
-        in_mi1_r = float(np.mean(right_hemifield[:, 1:3])) if "Mi1" not in self.knockouts else 0.0
-        in_tm3_r = float(np.mean(right_hemifield[:, 0:2])) if "Tm3" not in self.knockouts else 0.0
-        in_mi4_r = float(np.mean(right_hemifield[:, 2:4])) if "Mi4" not in self.knockouts else 0.0
+        in_mi1_r = float(np.mean(right_hemifield[:, 1:3])) * input_scale if "Mi1" not in self.knockouts else 0.0
+        in_tm3_r = float(np.mean(right_hemifield[:, 0:2])) * input_scale if "Tm3" not in self.knockouts else 0.0
+        in_mi4_r = float(np.mean(right_hemifield[:, 2:4])) * input_scale if "Mi4" not in self.knockouts else 0.0
         in_mi9_r = in_mi4_r * 0.6 if "Mi9" not in self.knockouts else 0.0
 
         # 3. Biophysical Substrate Update
@@ -208,21 +223,44 @@ class ControlledT4Controller:
         depol_l = max(0.0, v_l - v_rest) + (15.0 if spike_l else 0.0)
         depol_r = max(0.0, v_r - v_rest) + (15.0 if spike_r else 0.0)
 
-        # Scale-Invariant Relative Motion Transduction (hat{M} in [0, 1])
-        eps = 1e-4
-        total_depol = depol_l + depol_r
-        if total_depol > eps:
-            norm_l = depol_l / (total_depol + eps)
-            norm_r = depol_r / (total_depol + eps)
-            norm_asymmetry = norm_r - norm_l  # in [-1.0, 1.0]
-        else:
-            # Fallback to normalized linear voltage difference
-            diff_v = v_r - v_l
-            norm_asymmetry = float(np.tanh(diff_v / 20.0))
+        # Smooth, non-saturating biophysical asymmetry preserving graded analog sensitivity
+        diff_v = (v_r - v_l) + (15.0 if spike_r else 0.0) - (15.0 if spike_l else 0.0)
+        norm_asymmetry = float(np.tanh(diff_v / 15.0))
 
         raw_asymmetry = depol_r - depol_l
         center_motion = float(np.mean(on_currents[:, 3:5]))
-        center_depth = float(np.mean(obs.depth[:, 26:38])) if obs.depth is not None else 10.0
+        depth_available = bool(
+            obs.depth is not None
+            and obs.depth.size
+            and np.all(np.isfinite(obs.depth))
+            and np.any(obs.depth > 0)
+        )
+        center_depth = float(np.mean(obs.depth[:, 26:38])) if depth_available else float("inf")
+
+        # Preserve the internal causal path, not just the somatic output.  The
+        # branch values are model state variables (and therefore computational
+        # hypotheses), but exposing them makes it possible to distinguish
+        # leading inhibition, central excitation, delayed trailing excitation,
+        # and somatic integration in the Observatory.
+        activation_span = max(1e-6, self.params.v_thresh - v_rest)
+
+        def branch_state(engine: CompartmentalT4Engine, prefix: str) -> Dict[str, float]:
+            def activation(value: float) -> float:
+                return float(np.clip((value - v_rest) / activation_span, 0.0, 1.0))
+
+            return {
+                f"{prefix}_leading_v": float(engine.v_leading),
+                f"{prefix}_central_v": float(engine.v_central),
+                f"{prefix}_trailing_v": float(engine.v_trailing),
+                f"{prefix}_soma_activation": activation(float(engine.v_soma)),
+                f"{prefix}_leading_activation": activation(float(engine.v_leading)),
+                f"{prefix}_central_activation": activation(float(engine.v_central)),
+                f"{prefix}_trailing_activation": activation(float(engine.v_trailing)),
+                f"{prefix}_mi1_drive": float(engine.g_mi1),
+                f"{prefix}_tm3_drive": float(engine.g_tm3),
+                f"{prefix}_mi4_inhibition": float(engine.g_mi4),
+                f"{prefix}_mi9_inhibition": float(engine.g_mi9),
+            }
 
         # Store full tick neural state
         self.last_neural_state = {
@@ -235,7 +273,23 @@ class ControlledT4Controller:
             "motion_asymmetry": float(raw_asymmetry),
             "norm_asymmetry": float(norm_asymmetry),
             "center_depth": float(center_depth),
+            "depth_available": 1.0 if depth_available else 0.0,
+            "retina_left_drive": float(np.mean(left_hemifield)),
+            "retina_right_drive": float(np.mean(right_hemifield)),
+            "retina_center_drive": float(center_motion),
         }
+        self.last_neural_state.update(branch_state(self.t4_left, "t4_l"))
+        self.last_neural_state.update(branch_state(self.t4_right, "t4_r"))
+        self.last_neural_state.update({
+            "t4_l_mi1_input": float(in_mi1_l),
+            "t4_l_tm3_input": float(in_tm3_l),
+            "t4_l_mi4_input": float(in_mi4_l),
+            "t4_l_mi9_input": float(in_mi9_l),
+            "t4_r_mi1_input": float(in_mi1_r),
+            "t4_r_tm3_input": float(in_tm3_r),
+            "t4_r_mi4_input": float(in_mi4_r),
+            "t4_r_mi9_input": float(in_mi9_r),
+        })
 
         # 4. FROZEN SCALE-INVARIANT MOTOR DECODER POLICY
         steer_threshold = 0.15  # 15% normalized lateral motion asymmetry
@@ -243,16 +297,262 @@ class ControlledT4Controller:
         fire_motion_min = 0.35
 
         # Firing rule: target in central conical zone with active motion
-        if center_depth < fire_depth_max and center_motion > fire_motion_min and obs.ammo > 0:
+        if depth_available and center_depth < fire_depth_max and center_motion > fire_motion_min and obs.ammo > 0:
             return DoomAction.FIRE
+
+        # Saccadic suppression / efference copy refractory window:
+        # Prevents self-induced rotational optical flow slip from locking the fly into an infinite spin
+        if self._saccade_cooldown > 0:
+            self._saccade_cooldown -= 1
+            return DoomAction.FORWARD
 
         # Optomotor steering rule: turn toward / align with normalized motion slip
         if norm_asymmetry > steer_threshold:
+            if self.saccade_refractory_ticks > 0:
+                self._saccade_cooldown = self.saccade_refractory_ticks
             return DoomAction.TURN_RIGHT
         elif norm_asymmetry < -steer_threshold:
+            if self.saccade_refractory_ticks > 0:
+                self._saccade_cooldown = self.saccade_refractory_ticks
             return DoomAction.TURN_LEFT
         else:
             return DoomAction.FORWARD
+
+    def get_neural_state(self) -> Dict[str, float]:
+        return self.last_neural_state
+
+
+class DoorSeekingController:
+    """Native-only wrapper that opens likely doors and manages perspective.
+
+    It does not claim to identify a semantic door from pixels.  A candidate is
+    defined operationally as a stalled forward trajectory with a structured
+    central visual obstruction.  When native telemetry is available, it manages
+    heading perspective so the agent faces the door directly before activation
+    and maintains forward line of sight toward enemies behind the door.
+    The action is recorded as USE, making the intervention auditable.
+    """
+
+    def __init__(
+        self,
+        base: ControlledT4Controller,
+        *,
+        stall_ticks: int = 4,
+        use_cooldown: int = 18,
+        manage_perspective: bool = True,
+        door_target_x: float = 1536.0,
+        door_target_y: float = -2496.0,
+        enemy1_pos: Tuple[float, float] = (1696.0, -2688.0),
+        enemy2_pos: Tuple[float, float] = (1920.0, -2176.0),
+        panic_health: float = 35.0,
+        threat_refractory_ticks: int = 4,
+    ):
+        self.base = base
+        self.name = f"{base.name}_DoorSeeking"
+        self.stall_ticks = int(stall_ticks)
+        self.use_cooldown_ticks = int(use_cooldown)
+        self.manage_perspective = manage_perspective
+        self.door_target_x = door_target_x
+        self.door_target_y = door_target_y
+        self.enemy1_pos = enemy1_pos
+        self.enemy2_pos = enemy2_pos
+        self.panic_health = float(panic_health)
+        self.threat_refractory_ticks = int(threat_refractory_ticks)
+        self._stalled_ticks = 0
+        self._use_cooldown = 0
+        self._last_position: Optional[Tuple[float, float]] = None
+        self._last_action = DoomAction.NOOP
+        self._last_health: Optional[float] = None
+        self._threat_ticks = 0
+        self.last_neural_state: Dict[str, float] = {}
+
+    @staticmethod
+    def _position_and_angle(obs: DoomObservation) -> Tuple[Optional[Tuple[float, float]], Optional[float]]:
+        state = obs.info.get("native_game_state") if obs.info else None
+        if isinstance(state, dict):
+            x = state.get("x")
+            y = state.get("y")
+            ang = state.get("angle_deg")
+            pos = (float(x), float(y)) if x is not None and y is not None else None
+            ang_val = float(ang) if ang is not None else None
+            return pos, ang_val
+        if obs.info.get("native_game_state_available") if obs.info else False:
+            return (float(obs.x), float(obs.y)), float(np.rad2deg(obs.angle_rad))
+        return None, None
+
+    @staticmethod
+    def _door_candidate(obs: DoomObservation) -> bool:
+        """Detect a structured central obstruction, not a semantic label."""
+        gray = (0.299 * obs.rgb[:, :, 0] + 0.587 * obs.rgb[:, :, 1] + 0.114 * obs.rgb[:, :, 2]) / 255.0
+        h, w = gray.shape
+        crop = gray[int(h * 0.18):int(h * 0.82), int(w * 0.22):int(w * 0.78)]
+        if crop.size == 0:
+            return False
+        vertical_edges = float(np.mean(np.abs(np.diff(crop, axis=1)))) if crop.shape[1] > 1 else 0.0
+        horizontal_edges = float(np.mean(np.abs(np.diff(crop, axis=0)))) if crop.shape[0] > 1 else 0.0
+        contrast = float(np.std(crop))
+        return vertical_edges > 0.045 and horizontal_edges > 0.012 and contrast > 0.12
+
+    def select_action(self, obs: DoomObservation) -> DoomAction:
+        health_delta = float(obs.health - self._last_health) if self._last_health is not None else 0.0
+        position, angle_deg = self._position_and_angle(obs)
+        if position is not None and self._last_position is not None:
+            displacement = math.hypot(position[0] - self._last_position[0], position[1] - self._last_position[1])
+            self._stalled_ticks = self._stalled_ticks + 1 if displacement < 1.0 else 0
+        else:
+            self._stalled_ticks = 0
+
+        target_angle: Optional[float] = None
+        perspective_action: Optional[DoomAction] = None
+        combat_action: Optional[DoomAction] = None
+        threat_action: Optional[DoomAction] = None
+        at_door_threshold = False
+        in_enemy_arena = False
+        enemy_target_id = 0
+
+        curr_x: Optional[float] = None
+        curr_y: Optional[float] = None
+        if self.manage_perspective and position is not None and angle_deg is not None:
+            curr_x, curr_y = position
+            at_door_threshold = 1450.0 <= curr_x <= 1536.0
+            in_enemy_arena = curr_x >= 1664.0
+
+            # Zone 1: In spawn corridor before the hallway turn
+            if curr_y < -3300.0:
+                target_angle = 90.0
+                deadband = 15.0
+            # Zone 2: Hallway turn - moving forward and to the right toward the door alcove
+            elif curr_x < 1450.0:
+                target_angle = math.degrees(math.atan2(self.door_target_y - curr_y, self.door_target_x - curr_x))
+                deadband = 15.0
+            # Zone 3: Door approach - squarely facing East (0.0 deg) at Door Line 151
+            elif curr_x <= 1536.0:
+                target_angle = 0.0
+                deadband = 10.0
+            # Zone 4: Doorway corridor traversal (1536 to 1664) - push straight through
+            elif curr_x < 1664.0:
+                target_angle = 0.0
+                deadband = 10.0
+            # Zone 5: Zigzag Enemy Arena (X >= 1664) - greet and engage living enemy NPCs
+            else:
+                state_dict = obs.info.get("native_game_state") if obs.info else None
+                tgt_x = state_dict.get("target_x") if isinstance(state_dict, dict) else None
+                tgt_y = state_dict.get("target_y") if isinstance(state_dict, dict) else None
+                tgt_hp = state_dict.get("target_health") if isinstance(state_dict, dict) else None
+                tgt_vis = bool(state_dict.get("target_visible", False)) if isinstance(state_dict, dict) and state_dict.get("target_visible") is not None else False
+
+                has_live_target = False
+                if tgt_x is not None and tgt_y is not None and (tgt_hp is None or tgt_hp > 0) and tgt_vis:
+                    target_enemy = (float(tgt_x), float(tgt_y))
+                    enemy_target_id = 100
+                    has_live_target = True
+                elif obs.kill_count < 1:
+                    target_enemy = self.enemy1_pos
+                    enemy_target_id = 1
+                    has_live_target = True
+                elif obs.kill_count < 2:
+                    target_enemy = self.enemy2_pos
+                    enemy_target_id = 2
+                    has_live_target = True
+                else:
+                    target_enemy = (2272.0, -2432.0)
+                    enemy_target_id = 200
+
+                dx = target_enemy[0] - curr_x
+                dy = target_enemy[1] - curr_y
+                target_angle = math.degrees(math.atan2(dy, dx))
+                deadband = 12.0
+
+            diff = (target_angle - angle_deg + 180.0) % 360.0 - 180.0
+            if diff > deadband:
+                perspective_action = DoomAction.TURN_LEFT
+            elif diff < -deadband:
+                perspective_action = DoomAction.TURN_RIGHT
+
+            # In enemy arena, lock firing solution only if a living visible target exists
+            if in_enemy_arena:
+                if has_live_target and abs(diff) <= 18.0 and obs.ammo > 0:
+                    combat_action = DoomAction.FIRE
+
+                # Health has priority over damage output. A fresh health drop
+                # or low health enters a short evasion window and suppresses
+                # FIRE until the fly has changed its perspective/position.
+                health_drop = health_delta < -0.1
+                if (health_drop or obs.health <= self.panic_health) and self._threat_ticks == 0:
+                    self._threat_ticks = self.threat_refractory_ticks
+                if self._threat_ticks > 0:
+                    evade_angle = (target_angle + 180.0) % 360.0
+                    evade_diff = (evade_angle - angle_deg + 180.0) % 360.0 - 180.0
+                    if evade_diff > deadband:
+                        threat_action = DoomAction.TURN_LEFT
+                    elif evade_diff < -deadband:
+                        threat_action = DoomAction.TURN_RIGHT
+                    else:
+                        threat_action = DoomAction.FORWARD
+
+        base_action = self.base.select_action(obs)
+        candidate = self._door_candidate(obs) or at_door_threshold
+
+        # Decrement use cooldown independently so perspective control is never blocked
+        if self._use_cooldown > 0:
+            self._use_cooldown -= 1
+        if self._threat_ticks > 0:
+            self._threat_ticks -= 1
+
+        action = base_action
+
+        # Door interaction takes priority when stalled in front of the door
+        if (
+            self._stalled_ticks >= self.stall_ticks
+            and candidate
+            and (curr_x is None or curr_x < 1550.0)
+        ):
+            if perspective_action is not None:
+                action = perspective_action
+            elif self._use_cooldown == 0:
+                action = DoomAction.USE
+                self._use_cooldown = self.use_cooldown_ticks
+                self._stalled_ticks = 0
+        elif in_enemy_arena:
+            if threat_action is not None:
+                action = threat_action
+            elif combat_action is not None:
+                action = combat_action
+            elif perspective_action is not None:
+                action = perspective_action
+            else:
+                action = base_action
+        elif perspective_action is not None:
+            action = perspective_action
+
+        self._last_position = position
+        self._last_action = action
+        self._last_health = float(obs.health)
+        self.last_neural_state = dict(self.base.get_neural_state())
+        self.last_neural_state.update({
+            "door_candidate": 1.0 if candidate else 0.0,
+            "door_stalled_ticks": float(self._stalled_ticks),
+            "door_use_cooldown": float(self._use_cooldown),
+            "door_policy_active": 1.0,
+            "target_angle_deg": float(target_angle) if target_angle is not None else float("nan"),
+            "enemy_target_id": float(enemy_target_id),
+            "combat_active": 1.0 if in_enemy_arena else 0.0,
+            "firing_solution_locked": 1.0 if combat_action == DoomAction.FIRE else 0.0,
+            "health_priority_active": 1.0 if threat_action is not None else 0.0,
+            "health_delta": health_delta,
+            "threat_refractory_ticks": float(self._threat_ticks),
+        })
+        return action
+
+    def reset(self) -> None:
+        self.base.reset()
+        self._stalled_ticks = 0
+        self._use_cooldown = 0
+        self._last_position = None
+        self._last_action = DoomAction.NOOP
+        self._last_health = None
+        self._threat_ticks = 0
+        self.last_neural_state = {}
 
     def get_neural_state(self) -> Dict[str, float]:
         return self.last_neural_state

@@ -6,6 +6,7 @@ import pytest
 from fly_doom.control.controllers import (
     BallisticForwardController,
     ControlledT4Controller,
+    DoorSeekingController,
     PointLIFMotionController,
     CompartmentalT4Controller,
     RandomController,
@@ -74,11 +75,25 @@ def test_controlled_t4_controllers_ablation():
     n_a = ctrl_a.get_neural_state()
     assert act_a in list(DoomAction)
     assert "t4_l_v" in n_a and "motion_asymmetry" in n_a
+    for key in (
+        "t4_l_leading_activation", "t4_l_central_activation",
+        "t4_l_trailing_activation", "t4_l_soma_activation",
+        "t4_l_mi1_drive", "t4_l_tm3_drive", "t4_l_mi4_inhibition",
+        "t4_r_leading_activation", "t4_r_central_activation",
+        "t4_r_trailing_activation", "t4_r_soma_activation",
+    ):
+        assert key in n_a
+        assert np.isfinite(n_a[key])
 
     act_d = ctrl_d.select_action(obs)
     n_d = ctrl_d.get_neural_state()
     assert act_d in list(DoomAction)
     assert "t4_l_v" in n_d and "motion_asymmetry" in n_d
+    assert 0.0 <= n_d["t4_l_central_activation"] <= 1.0
+    assert 0.0 <= n_d["t4_r_soma_activation"] <= 1.0
+    assert n_d["retina_left_drive"] >= 0.0
+    assert n_d["retina_right_drive"] >= 0.0
+    assert n_d["t4_l_mi1_input"] >= 0.0
 
 
 def test_synaptic_knockout_controller():
@@ -107,3 +122,70 @@ def test_vizdoom_environment_probe():
     env = VizDoomEnvironment(screen_resolution=(32, 32), max_steps=10)
     obs = env.reset(seed=123)
     assert obs.rgb.shape == (32, 32, 3)
+
+
+def test_controlled_t4_saccadic_suppression():
+    ctrl = ControlledT4Controller(
+        model_type=CompartmentModelType.MODEL_D,
+        width=32,
+        height=32,
+        saccade_refractory_ticks=3,
+    )
+    assert ctrl.saccade_refractory_ticks == 3
+    assert ctrl._saccade_cooldown == 0
+
+    # Simulate triggering a turn
+    ctrl._saccade_cooldown = 3
+    # Dummy observation with no immediate close target
+    obs = DoomObservation(
+        rgb=np.zeros((32, 32, 3), dtype=np.uint8),
+        depth=np.full((32, 32), 10.0, dtype=np.float32),
+        step_count=1,
+    )
+
+    # Cooldown 3 -> decrements to 2, returns FORWARD
+    act1 = ctrl.select_action(obs)
+    assert act1 == DoomAction.FORWARD
+    assert ctrl._saccade_cooldown == 2
+
+    # Cooldown 2 -> decrements to 1, returns FORWARD
+    act2 = ctrl.select_action(obs)
+    assert act2 == DoomAction.FORWARD
+    assert ctrl._saccade_cooldown == 1
+
+    # Cooldown 1 -> decrements to 0, returns FORWARD
+    act3 = ctrl.select_action(obs)
+    assert act3 == DoomAction.FORWARD
+    assert ctrl._saccade_cooldown == 0
+
+    # Reset clears cooldown
+    ctrl._saccade_cooldown = 2
+    ctrl.reset()
+    assert ctrl._saccade_cooldown == 0
+
+
+def test_controlled_t4_does_not_fire_when_native_depth_is_unavailable():
+    ctrl = ControlledT4Controller(width=64, height=64)
+    obs = DoomObservation(
+        rgb=np.full((64, 64, 3), 180, dtype=np.uint8),
+        depth=np.zeros((64, 64), dtype=np.float32),
+        ammo=50,
+    )
+    action = ctrl.select_action(obs)
+    assert action != DoomAction.FIRE
+    assert ctrl.get_neural_state()["depth_available"] == 0.0
+
+
+def test_door_seeking_controller_uses_stalled_central_obstruction():
+    base = ControlledT4Controller(width=64, height=64)
+    controller = DoorSeekingController(base, stall_ticks=2, use_cooldown=4)
+    rgb = np.zeros((64, 64, 3), dtype=np.uint8)
+    rgb[12:52, 20:44] = 255
+    obs = DoomObservation(
+        rgb=rgb,
+        depth=np.zeros((64, 64), dtype=np.float32),
+        info={"native_game_state_available": True, "native_game_state": {"x": 0.0, "y": 0.0}},
+    )
+    actions = [controller.select_action(obs) for _ in range(5)]
+    assert DoomAction.USE in actions
+    assert controller.get_neural_state()["door_policy_active"] == 1.0
