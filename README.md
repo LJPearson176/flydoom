@@ -18,6 +18,7 @@ An anatomically and biophysically authentic *Drosophila melanogaster* digital tw
 ## Table of Contents
 
 - [Overview & Architecture](#overview--architecture)
+- [Lineage & Relationship to doomfly](#lineage--relationship-to-doomfly)
 - [Biophysical Multi-Compartment T4 Circuit (Model D)](#biophysical-multi-compartment-t4-circuit-model-d)
 - [Central Complex & Descending Motor Control](#central-complex--descending-motor-control)
 - [Connectome Lesion & Combat Analysis](#connectome-lesion--combat-analysis)
@@ -78,6 +79,20 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
 - **128 Retinotopic Cartridges**: Linking 64 left and 64 right visual columns across $-30^\circ$ to $+30^\circ$ azimuth.
 - **7 Canonical SWC Skeletons**: Direct morphological neuron reconstructions of `Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`, `E-PG`, and `DNpe017`.
 - **178 Submicron Chemical Active Zones**: Pre- and post-synaptic contacts labeled with physiological neurotransmitters: Acetylcholine (116 ACh), GABA (24 GABA), Glutamate (18 Glu), and Neuromuscular Junctions (20 NMJ).
+
+---
+
+## Lineage & Relationship to doomfly
+
+FlyDoom is directly inspired by and builds upon the pioneering open-source connectome project [**doomfly**](https://github.com/nftechie/doomfly) by [`@nftechie`](https://github.com/nftechie) ([nftechie/doomfly](https://github.com/nftechie/doomfly)).
+
+While `doomfly` demonstrated the conceptual feasibility of linking reconstructed MaleCNS v1.0 neurons to a live Doom environment with dopamine-modulated plasticity, its validation reports demonstrated that abstract whole-brain graph flow without compartmental biophysics struggled to establish stable closed-loop survival and suffered from directional/motor ambiguities.
+
+FlyDoom extends this research lineage by introducing explicit, physiologically grounded neurobiology:
+1. **Multi-Compartment Biophysics (Model D) vs. Abstract Graph Flow**: Replaces linear node summing with a four-branch active dendritic model incorporating biological reversal potentials ($E_{\text{GABA}} = -75\,\text{mV}$, $E_{\text{Glu}} = -80\,\text{mV}$, $E_{\text{exc}} = 0\,\text{mV}$), non-linear shunting inhibition, and supralinear coincidence detection validated against in vivo patch-clamp recordings (Haag et al., 2016; Gruntman et al., 2018).
+2. **Graded Hyperbolic Steering vs. Runaway Hemispheric Saturation**: Formulates continuous, non-saturating motor asymmetry ($\hat{\Delta} = \tanh((V_R - V_L)/15.0)$) and somatic-referenced axial coupling ($I_{\text{axial}} = g_{\text{axial}}(V_{\text{lead}} - V_{\text{soma}})$), resolving the catastrophic hemispheric locking where unilateral saturation previously crippled corridor navigation.
+3. **Native macOS GZDoom Closed-Loop Embodiment**: Moves beyond headless ViZDoom buffers to an end-to-end native macOS desktop bridge using zero-copy CoreGraphics frame capture and Quartz event-tap keystroke injection into `/Applications/GZDoom.app`.
+4. **Anatomical Spatial Digital Twin & Micro-Circuit Inspector**: Couples closed-loop gameplay with full JFRC/JRC2018 3D spatial alignment, 128 retinotopic cartridges, 7 EM SWC neuron skeletons, 178 chemical active zones, and real-time in silico genetic lesion benchmarking.
 
 ---
 
@@ -330,6 +345,7 @@ If you build upon FlyDoom in your scientific or computational neuroscience resea
 ### DOOM & Embodied Neuromorphic Benchmarking
 - **id Software (1993).** *DOOM*. Designed by John Carmack, John Romero, Adrian Carmack, Kevin Cloud, and Sandy Petersen.
 - **Kempka, M., Wydmuch, M., Runc, G., Toczek, J., & Jaśkowski, W. (2016).** ViZDoom: A Doom-based AI research platform for visual reinforcement learning. *IEEE Conference on Computational Intelligence and Games (CIG)*, 1–8.
+- **nftechie (2024–2025).** *doomfly*: Fly-connectome simulation controlling a live Doom arena, with experimental neural plasticity, spectator UI, and scientific validation reports. [GitHub: nftechie/doomfly](https://github.com/nftechie/doomfly).
 
 ---
 
