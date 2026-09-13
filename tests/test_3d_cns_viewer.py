@@ -55,6 +55,8 @@ def test_compiled_3d_viewer_html():
     assert "updateMatrixModal" in content
     assert "onMatrixCellClick" in content
     assert "setLesionMode" in content
+    assert "stage1_waypoints" in content
+    assert "STAGE 1 TOPOLOGICAL WAYPOINTS" in content
 
 
 def test_observatory_index_integration():

@@ -29,6 +29,22 @@ def main():
     with open(mesh_path) as f:
         mesh_data = json.load(f)
 
+    from fly_doom.dynamics.fan_shaped_body import Stage1WaypointGraph
+
+    wp_graph = Stage1WaypointGraph()
+    stage1_waypoints = [
+        {
+            "zone_id": wp.zone_id,
+            "name": wp.name,
+            "pos": list(wp.target_pos),
+            "radius": wp.radius,
+            "heading_deg": wp.target_heading_deg,
+            "action": wp.required_action,
+            "desc": wp.description,
+        }
+        for wp in wp_graph.waypoints
+    ]
+
     payload = {
         "anatomy": cns_data["anatomy"],
         "episodes": cns_data["episodes"],
@@ -37,6 +53,7 @@ def main():
         "brain_mesh": mesh_data["brain_surface_edges"],
         "neuropil_meshes": mesh_data["neuropils"],
         "high_fidelity_pathways": model_3d.get("high_fidelity_pathways"),
+        "stage1_waypoints": stage1_waypoints,
     }
     payload_json = json.dumps(payload)
 
@@ -490,6 +507,7 @@ def main():
       <div class="chip"><span>SWC SKELETONS</span><strong>14 NEURONS</strong></div>
       <div class="chip"><span>EM SYNAPSES</span><strong>262 VERIFIED</strong></div>
       <div class="chip"><span>CARTRIDGES</span><strong>128 COLS</strong></div>
+      <div class="chip"><span>STAGE 1 PATH</span><strong>7 ZONES (SPAWN &rarr; EXIT)</strong></div>
     </div>
   </header>
 
@@ -715,6 +733,10 @@ def main():
           <input type="checkbox" id="chkCartridges" onchange="state.showCartridges = this.checked">
         </div>
         <div class="layer-row">
+          <span>Stage 1 Waypoint Trajectory (7 Zones)</span>
+          <input type="checkbox" id="chkWaypoints" checked onchange="state.showWaypoints = this.checked">
+        </div>
+        <div class="layer-row">
           <span>SWC Morphology Skeletons (14 Neurons)</span>
           <input type="checkbox" id="chkSWC" checked onchange="state.showSWC = this.checked">
         </div>
@@ -887,6 +909,7 @@ def main():
       // High-Fidelity Multi-Scale Granularity
       granularity: 1,
       showCartridges: false,
+      showWaypoints: true,
       showSWC: true,
       showSynapses: true,
       synapseFilter: "all",
@@ -2086,6 +2109,77 @@ def main():
           }}
         }}
         ctx.globalAlpha = 1.0;
+      }}
+
+      // 10. Stage 1 Waypoint Trajectory Inset HUD (E1M1 Spawn to Exit)
+      if (state.showWaypoints && DATA.stage1_waypoints && DATA.stage1_waypoints.length > 0) {{
+        const wps = DATA.stage1_waypoints;
+        const boxW = 210;
+        const boxH = 135;
+        const boxX = w - boxW - 20;
+        const boxY = 65;
+
+        // Background card
+        ctx.fillStyle = "rgba(9, 20, 27, 0.90)";
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.45)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // Card header
+        ctx.fillStyle = "#00e5ff";
+        ctx.font = "bold 9px monospace";
+        ctx.fillText("STAGE 1 TOPOLOGICAL WAYPOINTS", boxX + 10, boxY + 16);
+
+        // Normalize coordinates into HUD box (E1M1 coordinates: X: 950..3200, Y: -3700..-2300)
+        const minX = 950, maxX = 3250;
+        const minY = -3750, maxY = -2300;
+
+        function mapToBox(wx, wy) {{
+          const nx = (wx - minX) / (maxX - minX);
+          const ny = 1.0 - (wy - minY) / (maxY - minY);
+          return {{
+            x: boxX + 15 + nx * (boxW - 30),
+            y: boxY + 28 + ny * (boxH - 46)
+          }};
+        }}
+
+        // Path dashed line
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (let i = 0; i < wps.length; i++) {{
+          const pt = mapToBox(wps[i].pos[0], wps[i].pos[1]);
+          if (i === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        }}
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Waypoint nodes
+        for (let i = 0; i < wps.length; i++) {{
+          const wp = wps[i];
+          const pt = mapToBox(wp.pos[0], wp.pos[1]);
+          const isExit = (wp.action === "EXIT_SWITCH");
+          const isDoor = (wp.action === "USE_DOOR");
+
+          ctx.fillStyle = isExit ? "#00ffaa" : (isDoor ? "#ff9800" : "#00e5ff");
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, isExit ? 4.5 : 3.0, 0, 2 * Math.PI);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(203, 213, 225, 0.85)";
+          ctx.font = "8px monospace";
+          ctx.fillText(`Z${{wp.zone_id}}`, pt.x + 5, pt.y + 3);
+        }}
+
+        // Bottom milestone banner
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "8px monospace";
+        ctx.fillText("SPAWN → CATWALK → STAIRS → EXIT", boxX + 10, boxY + boxH - 6);
       }}
 
       // Dynamic Vm Readout Update
