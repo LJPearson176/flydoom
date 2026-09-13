@@ -1,6 +1,6 @@
 # FlyDoom: Neuromorphic *Drosophila* Connectome Twin Playing DOOM (1993)
 
-[![CI Tests](https://img.shields.io/badge/tests-83%20passed-brightgreen.svg)](tests/)
+[![CI Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Connectome](https://img.shields.io/badge/connectome-Janelia%20MaleCNS%20%7C%20FlyWire-purple.svg)](https://flywire.ai/)
 [![DOOM Engine](https://img.shields.io/badge/engine-GZDoom%20Native%20%7C%20E1M1-red.svg)](https://zdoom.org/)
@@ -23,6 +23,8 @@ An anatomically and biophysically authentic *Drosophila melanogaster* digital tw
 - [Overview & Architecture](#overview--architecture)
 - [Lineage & Relationship to doomfly](#lineage--relationship-to-doomfly)
 - [Biophysical Multi-Compartment T4 Circuit (Model D)](#biophysical-multi-compartment-t4-circuit-model-d)
+- [2D Optic Flow Field Decomposition & LPTC-HS](#2d-optic-flow-field-decomposition--lptc-hs)
+- [Central Complex Ellipsoid Body Ring Attractor (CAN)](#central-complex-ellipsoid-body-ring-attractor-can)
 - [Central Complex & Descending Motor Control](#central-complex--descending-motor-control)
 - [Connectome Lesion & Combat Analysis](#connectome-lesion--combat-analysis)
 - [Interactive 3D Connectome Observatory](#interactive-3d-connectome-observatory)
@@ -46,29 +48,31 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
                               │
              ┌────────────────┴────────────────┐
              ▼                                 ▼
-   [ Left Hemifield (8x4) ]          [ Right Hemifield (8x4) ]
-   Mi1, Tm3, Mi4, Mi9 Drive          Mi1, Tm3, Mi4, Mi9 Drive
+   [ Left Eye Cartridges 8x8 ]       [ Right Eye Cartridges 8x8 ]
+   64 Columns (Mi1, Tm3, Mi4, Mi9)   64 Columns (Mi1, Tm3, Mi4, Mi9)
              │                                 │
              ▼                                 ▼
-   [ Left T4 Dendritic Tree ]        [ Right T4 Dendritic Tree ]
-   Model D Active Shunting           Model D Active Shunting
-   & Coincidence Integration         & Coincidence Integration
-             │                                 │
+   [ Left Columnar T4 Array ]        [ Right Columnar T4 Array ]
+   Local (u, v) Motion Vectors       Local (u, v) Motion Vectors
              └────────────────┬────────────────┘
                               │
                               ▼
-           [ Graded Asymmetry: tanh((Vr - Vl) / 15.0) ]
+           [ 2D Optic Flow Field Decomposition ]
+           • Divergence ∇·v: Looming expansion → Lobula LC / DNpe017
+           • Curl ∇×v: Rotational shear → LPTC-HS wide-field yaw
+           • Translation (Tx, Ty): Bulk retinal drift
                               │
              ┌────────────────┼────────────────┐
              ▼                ▼                ▼
-     [ Left Yaw Turn ]   [ Forward ]   [ Right Yaw Turn ]
+     [ LPTC-HS Yaw ]    [ Forward Thrust ]  [ LC Looming ]
+             │                │                │
+             ▼                │                ▼
+    [ 16-Wedge EB CAN ]       │         [ Weapon Trigger ]
+    Heading Stabilization     │         DNpe017 → FIRE
              │                │                │
              └────────────────┼────────────────┘
                               │
-     [ Central Complex E-PG Compass & Heading Stabilization ]
-                              │
-     [ Descending Command Neurons (DNpe017, SEZ Tactile Touch) ]
-                              │
+                              ▼
      [ Ventral Nerve Cord (VNC) Thoracic Neuromeres: T1 / T2 / T3 ]
                               │
                               ▼
@@ -80,6 +84,8 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
 - **Janelia MaleCNS v1.0 & FlyWire Connectome Alignment**: Registered directly to the JFRC2010 / JRC2018 template brains.
 - **3,030 Dense Neuron Fibers**: Reconstructed neuropil tracts spanning Optic Lobes (ME, LO, LOP), Central Complex (EB, FB, PB, NO), and Ventral Nerve Cord (VNC).
 - **128 Retinotopic Cartridges**: Linking 64 left and 64 right visual columns across $-30^\circ$ to $+30^\circ$ azimuth.
+- **2D Optic Flow Decomposition**: Vector Helmholtz-Hodge decomposition separating forward looming ($\nabla \cdot \vec{v}$), rotational curl ($\nabla \times \vec{v}$), and bulk translation.
+- **16-Wedge EB Continuous Attractor (CAN)**: Real-time heading integration modeling Drosophila $E\text{-}PG$ compass neurons, $P\text{-}EN$ angular velocity shift neurons, and $\Delta 7$ global inhibition.
 - **7 Canonical SWC Skeletons**: Direct morphological neuron reconstructions of `Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`, `E-PG`, and `DNpe017`.
 - **178 Submicron Chemical Active Zones**: Pre- and post-synaptic contacts labeled with physiological neurotransmitters: Acetylcholine (116 ACh), GABA (24 GABA), Glutamate (18 Glu), and Neuromuscular Junctions (20 NMJ).
 
@@ -138,6 +144,32 @@ Unlike naive models that suffer from division-by-zero or runaway saturation when
 $$\hat{\Delta} = \tanh\left(\frac{(V_R - V_L) + 15.0 \cdot (s_R - s_L)}{15.0}\right)$$
 
 This guarantees smooth, graded motor control without hard $\pm 1.000$ locking, enabling stable wall-following and natural optomotor responses.
+
+---
+
+## 2D Optic Flow Field Decomposition & LPTC-HS
+
+FlyDoom tiles an array of elementary motion detectors across all 128 cartridges ($8\times 8$ per eye) evaluating directional motion along horizontal ($T4a/T4b$) and vertical ($T4c/T4d$) axes. The resulting dense vector velocity field $\vec{v}(r, c) = (u(r, c), v(r, c))$ undergoes 2D Helmholtz-Hodge decomposition:
+
+1. **Divergence $\nabla \cdot \vec{v}$ (Forward Looming Detection)**:
+   $$\nabla \cdot \vec{v} = \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y}$$
+   Centrifugal expansion from the visual center stimulates Lobula Columnar ($LC4, LPLC2$) neurons projecting to giant descending neuron `DNpe017` to trigger collision avoidance, escape saccades, or weapon discharge.
+2. **Curl $\nabla \times \vec{v}$ (Wide-Field Yaw Rotation)**:
+   $$\nabla \times \vec{v} = \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y}$$
+   Horizontal shear is integrated by bilateral **Lobula Plate Tangential Cells ($LPTC\text{-}HS$)** with wide equatorial receptive fields to stabilize rotational flight.
+3. **Translational Slip $(\bar{u}, \bar{v})$**:
+   Bulk drift across cartridges provides lateral distance regulation and wall-following.
+
+---
+
+## Central Complex Ellipsoid Body Ring Attractor (CAN)
+
+Spatial heading is maintained by a 16-wedge continuous attractor network (CAN) in the Central Complex Ellipsoid Body (EB):
+
+- **$E\text{-}PG$ Compass Neurons**: 16 wedges tile azimuthal space $[-\pi, \pi)$ with recurrent cosine excitation ($W_{ij} = W_0 \cos(\theta_i - \theta_j)$).
+- **$\Delta 7$ Global Inhibition**: Enforces winner-take-all sparsity, sustaining a sharp unimodal activity bump ($R \ge 0.85$).
+- **$P\text{-}EN$ Phase-Shift Interneurons**: Ingests optomotor yaw slip ($\omega_{\text{vis}}$ from $LPTC\text{-}HS$) and motor efference copy ($\omega_{\text{motor}}$ from saccadic turns) to smoothly pull the activity bump around the toroid.
+- **Persistent Spatial Memory**: When stationary or navigating straight corridors, the bump holds its angular position without drift, providing an internal compass heading.
 
 ---
 
@@ -306,10 +338,12 @@ flydoom/
 │       │   ├── gzdoom_telemetry.py        # In-engine state parser
 │       │   └── macos_gzdoom_bridge.py     # Quartz screen capture & keyboard injection
 │       ├── dynamics/                      # Biophysical differential equation engines
-│       │   └── compartmental_t4.py        # Model A, B, C, and D active dendritic trees
+│       │   ├── central_complex_ring.py    # 16-wedge continuous attractor network (CAN)
+│       │   ├── compartmental_t4.py        # Model A, B, C, and D active dendritic trees
+│       │   └── optic_flow.py              # 128-cartridge retinotopic array & 2D flow decomposition
 │       └── sensory/                       # Ommatidial visual encoders
 │           └── encoders/delta.py          # Hexagonal lattice & temporal differencing
-├── tests/                                 # 83 unit & integration tests
+├── tests/                                 # 93 unit & integration tests
 ├── web/                                   # Web Observatory & visualization application
 │   ├── app.js                             # Live hologram canvas renderer & telemetry UI
 │   ├── fly_3d_visible_nervous_system.html # Standalone 3D Connectome Observatory

@@ -33,6 +33,8 @@ from fly_doom.dynamics.compartmental_t4 import (
     CompartmentalT4Engine,
     CompartmentModelType,
 )
+from fly_doom.dynamics.optic_flow import OpticFlowDecomposer, RetinotopicT4ArrayEngine
+from fly_doom.dynamics.central_complex_ring import EllipsoidBodyRingAttractor
 from fly_doom.sensory.encoders.delta import EncoderDelta
 
 
@@ -146,11 +148,15 @@ class ControlledT4Controller:
         width: int = 64,
         height: int = 64,
         saccade_refractory_ticks: int = 0,
+        use_population_flow: bool = True,
+        use_ring_attractor: bool = True,
     ):
         self.model_type = model_type
         self.knockouts = synaptic_knockouts or set()
         self.saccade_refractory_ticks = int(saccade_refractory_ticks)
         self._saccade_cooldown = 0
+        self.use_population_flow = use_population_flow
+        self.use_ring_attractor = use_ring_attractor
 
         ko_str = f"_{'-'.join(sorted(self.knockouts))}_KO" if self.knockouts else ""
         self.name = custom_name or f"T4_{model_type.name}{ko_str}"
@@ -170,14 +176,23 @@ class ControlledT4Controller:
 
         self.t4_left = CompartmentalT4Engine(self.recon, self.params, model_type=self.model_type)
         self.t4_right = CompartmentalT4Engine(self.recon, self.params, model_type=self.model_type)
+
+        # High-fidelity population-level retinotopic array & central complex ring
+        self.t4_array = RetinotopicT4ArrayEngine(rows=8, cols=8, params=self.params)
+        self.optic_flow_decomposer = OpticFlowDecomposer(rows=8, cols=8)
+        self.eb_ring_attractor = EllipsoidBodyRingAttractor(num_wedges=16, dt_ms=self.dt_ms)
+        self._last_action = DoomAction.NOOP
         self.last_neural_state: Dict[str, float] = {}
 
     def reset(self) -> None:
         self.encoder.reset()
         self.t4_left.reset()
         self.t4_right.reset()
+        self.t4_array.reset()
+        self.eb_ring_attractor.reset()
         self.last_neural_state = {}
         self._saccade_cooldown = 0
+        self._last_action = DoomAction.NOOP
 
     def select_action(self, obs: DoomObservation) -> DoomAction:
         # 1. Sensory Projection
@@ -291,6 +306,46 @@ class ControlledT4Controller:
             "t4_r_mi9_input": float(in_mi9_r),
         })
 
+        # High-Fidelity Population-Level Retinotopic Optic Flow & Central Complex Dynamics
+        flow_metrics = None
+        if self.use_population_flow:
+            u_field, v_field, _ = self.t4_array.step(on_currents, knockouts=self.knockouts)
+            flow_metrics = self.optic_flow_decomposer.decompose(u_field, v_field)
+            self.last_neural_state.update({
+                "flow_divergence": float(flow_metrics.divergence),
+                "flow_curl": float(flow_metrics.curl),
+                "flow_trans_x": float(flow_metrics.trans_x),
+                "flow_trans_y": float(flow_metrics.trans_y),
+                "flow_looming_index": float(flow_metrics.looming_index),
+                "lptc_hs_l": float(flow_metrics.lptc_hs_l),
+                "lptc_hs_r": float(flow_metrics.lptc_hs_r),
+            })
+
+        if self.use_ring_attractor:
+            # Motor efference copy from previous action
+            omega_motor = 0.0
+            if self._last_action == DoomAction.TURN_RIGHT:
+                omega_motor = 1.5
+            elif self._last_action == DoomAction.TURN_LEFT:
+                omega_motor = -1.5
+
+            # Visual yaw slip from LPTC-HS asymmetry / curl
+            omega_vis = 0.0
+            if flow_metrics is not None:
+                omega_vis = 0.05 * (flow_metrics.lptc_hs_r - flow_metrics.lptc_hs_l) - flow_metrics.curl * 0.2
+            elif abs(norm_asymmetry) > 0.05:
+                omega_vis = norm_asymmetry * 1.5
+
+            net_omega = omega_motor + omega_vis
+            eb_state = self.eb_ring_attractor.step(angular_velocity=net_omega)
+            self.last_neural_state.update({
+                "eb_heading_deg": float(eb_state.heading_angle_deg),
+                "eb_heading_rad": float(eb_state.heading_angle_rad),
+                "eb_bump_amplitude": float(eb_state.bump_amplitude),
+                "eb_bump_coherence": float(eb_state.bump_coherence),
+                "eb_angular_velocity": float(net_omega),
+            })
+
         # 4. FROZEN SCALE-INVARIANT MOTOR DECODER POLICY
         steer_threshold = 0.15  # 15% normalized lateral motion asymmetry
         fire_depth_max = 3.50
@@ -298,24 +353,29 @@ class ControlledT4Controller:
 
         # Firing rule: target in central conical zone with active motion
         if depth_available and center_depth < fire_depth_max and center_motion > fire_motion_min and obs.ammo > 0:
+            self._last_action = DoomAction.FIRE
             return DoomAction.FIRE
 
         # Saccadic suppression / efference copy refractory window:
         # Prevents self-induced rotational optical flow slip from locking the fly into an infinite spin
         if self._saccade_cooldown > 0:
             self._saccade_cooldown -= 1
+            self._last_action = DoomAction.FORWARD
             return DoomAction.FORWARD
 
         # Optomotor steering rule: turn toward / align with normalized motion slip
         if norm_asymmetry > steer_threshold:
             if self.saccade_refractory_ticks > 0:
                 self._saccade_cooldown = self.saccade_refractory_ticks
+            self._last_action = DoomAction.TURN_RIGHT
             return DoomAction.TURN_RIGHT
         elif norm_asymmetry < -steer_threshold:
             if self.saccade_refractory_ticks > 0:
                 self._saccade_cooldown = self.saccade_refractory_ticks
+            self._last_action = DoomAction.TURN_LEFT
             return DoomAction.TURN_LEFT
         else:
+            self._last_action = DoomAction.FORWARD
             return DoomAction.FORWARD
 
     def get_neural_state(self) -> Dict[str, float]:

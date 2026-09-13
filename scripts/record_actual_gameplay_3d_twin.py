@@ -219,10 +219,16 @@ def render_3d_nervous_system(
     draw.text((320, 11), "JFRC2 TEMPLATE · 7 SWC SKELETONS · 178 SYNAPSES", fill=(88, 223, 194))
 
     # Bottom Telemetry Cards in 3D panel (Detailed Activation Mapping)
-    draw.rectangle([12, height - 96, width - 12, height - 8], fill=(9, 20, 27), outline=(22, 50, 62), width=1)
-    draw.text((20, height - 90), f"ASYMMETRY: {asym:+.3f}", fill=(240, 166, 90))
-    draw.text((180, height - 90), f"T4 L/R: {t4_l:.1f} / {t4_r:.1f} mV", fill=(0, 229, 255))
-    draw.text((370, height - 90), f"LOCK: {'LOCKED (<=18°)' if locked else 'SCANNING'}", fill=(0, 255, 170) if locked else (180, 190, 195))
+    draw.rectangle([12, height - 104, width - 12, height - 6], fill=(9, 20, 27), outline=(22, 50, 62), width=1)
+
+    div = float(neural_state.get("flow_divergence", 0.0) or 0.0)
+    curl = float(neural_state.get("flow_curl", 0.0) or 0.0)
+    eb_head = float(neural_state.get("eb_heading_deg", 0.0) or 0.0)
+    eb_coh = float(neural_state.get("eb_bump_coherence", 0.0) or 0.0)
+
+    draw.text((20, height - 98), f"ASYMMETRY: {asym:+.3f} (Div {div:+.2f} Curl {curl:+.2f})", fill=(240, 166, 90))
+    draw.text((310, height - 98), f"EB COMPASS: {eb_head:+.1f}° (R={eb_coh:.2f})", fill=(0, 255, 170) if eb_coh > 0.5 else (180, 190, 195))
+    draw.text((505, height - 98), f"LOCK: {'LOCKED' if locked else 'SCAN'}", fill=(0, 255, 170) if locked else (180, 190, 195))
 
     l_lead = float(neural_state.get("t4_l_leading_activation", 0.0) or 0.0)
     l_cent = float(neural_state.get("t4_l_central_activation", 0.0) or 0.0)
@@ -230,7 +236,7 @@ def render_3d_nervous_system(
     r_lead = float(neural_state.get("t4_r_leading_activation", 0.0) or 0.0)
     r_cent = float(neural_state.get("t4_r_central_activation", 0.0) or 0.0)
     r_trail = float(neural_state.get("t4_r_trailing_activation", 0.0) or 0.0)
-    draw.text((20, height - 72), f"T4 ARBORS: L [Lead {l_lead:.2f}  Cent {l_cent:.2f}  Trail {l_trail:.2f}]   R [Lead {r_lead:.2f}  Cent {r_cent:.2f}  Trail {r_trail:.2f}]", fill=(170, 210, 220))
+    draw.text((20, height - 78), f"T4 ARBORS: L [Lead {l_lead:.2f}  Cent {l_cent:.2f}  Trail {l_trail:.2f}]   R [Lead {r_lead:.2f}  Cent {r_cent:.2f}  Trail {r_trail:.2f}]", fill=(170, 210, 220))
 
     circ_desc = "BILATERAL MOTION EQUILIBRIUM"
     if is_fire:
@@ -242,8 +248,8 @@ def render_3d_nervous_system(
     elif asym < -0.04:
         circ_desc = f"LEFT MEDULLA M1-M10 -> LOP T4a/T5a -> LEFT YAW ({asym:.3f})"
 
-    draw.text((20, height - 52), f"ACTIVE BIOPHYSICAL CIRCUIT: {circ_desc}", fill=(220, 235, 240))
-    draw.text((20, height - 32), f"MOTOR COMMAND: {action} · 128 CARTRIDGES · 178 SYNAPSES ACTIVE", fill=(120, 150, 160))
+    draw.text((20, height - 58), f"ACTIVE BIOPHYSICAL CIRCUIT: {circ_desc}", fill=(220, 235, 240))
+    draw.text((20, height - 38), f"MOTOR COMMAND: {action} · 128 CARTRIDGES · 16 EB WEDGES · 178 SYNAPSES ACTIVE", fill=(120, 150, 160))
 
     return img
 
