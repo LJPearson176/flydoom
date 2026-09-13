@@ -534,6 +534,24 @@ function updateLiveView(data) {
   holoState.isDamage = (currentHealth < 40);
   updateActivationMap(neural);
 
+  // Population Optic Flow, Central Complex & Mushroom Body Updates
+  const flowDiv = Number(neural.flow_divergence ?? 0);
+  const flowCurl = Number(neural.flow_curl ?? 0);
+  const ebHead = Number(neural.eb_heading_deg ?? 0);
+  const ebCoh = Number(neural.eb_bump_coherence ?? 0);
+  const mbVal = Number(neural.mb_valence ?? 0);
+  const mbDa = Number(neural.mb_ppl1_da ?? 0);
+
+  setText('#flowDivVal', `${flowDiv >= 0 ? '+' : ''}${flowDiv.toFixed(2)}`);
+  setText('#flowCurlVal', `${flowCurl >= 0 ? '+' : ''}${flowCurl.toFixed(2)}`);
+  setText('#ebHeadingVal', `${ebHead >= 0 ? '+' : ''}${ebHead.toFixed(1)}° (R=${ebCoh.toFixed(2)})`);
+  setText('#mbValenceVal', `${mbVal >= 0 ? '+' : ''}${mbVal.toFixed(2)} (PPL1 DA ${mbDa.toFixed(2)})`);
+
+  const divBar = $('#flowDivBar');
+  if (divBar) divBar.style.width = `${Math.max(0, Math.min(100, 50 + flowDiv * 50))}%`;
+  const curlBar = $('#flowCurlBar');
+  if (curlBar) curlBar.style.width = `${Math.max(0, Math.min(100, 50 + flowCurl * 50))}%`;
+
   // --- IN-SITU NEURAL HUD UPDATES ---
   if (hudEnabled) {
     const t4L = Number(neural.t4_l_v ?? -65.0);

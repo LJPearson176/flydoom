@@ -172,6 +172,29 @@
           <div class="activation-trace-wrap"><div class="chart-title"><span>COMPARTMENT TRACE · LAST 64 TICKS</span><span class="trace-legend">L <i></i> R <b></b> SPIKE <em></em></span></div><canvas id="activationTraceCanvas" width="430" height="76" aria-label="Rolling bilateral T4 compartment activation trace"></canvas></div>
           <div class="chart-block"><div class="chart-title"><span>SPIKE RASTER</span><span class="chart-legend"><i></i> T4 <i class="orange-dot"></i> T5</span></div><div class="raster" id="raster"></div><div class="axis"><span>700</span><span>750</span><span>800</span><span>843 ms</span></div></div>
           <div class="direction-block"><div class="chart-title"><span>DESCENDING ASYMMETRY</span><span>PD 92°</span></div><div class="direction-meter"><span>L</span><div><i style="left:78%"></i></div><span>R</span></div><div class="direction-labels"><span>LEFT 0.14</span><span>RIGHT 0.82</span></div></div>
+
+          <!-- HIGH-FIDELITY POPULATION CIRCUITS & PLASTICITY -->
+          <div class="hifi-circuits-block" style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px;">
+            <div class="chart-title"><span>2D OPTIC FLOW & CENTRAL COMPLEX</span><span class="provenance-key biological">128 COLUMNS · 16 WEDGES</span></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; margin-top: 6px;">
+              <div>
+                <div style="display:flex; justify-content:space-between; color:var(--text-muted);"><span>DIV (LOOM)</span><strong id="flowDivVal" style="color:var(--cyan);">+0.00</strong></div>
+                <div class="activity-track" style="height:5px; margin-top:3px;"><i id="flowDivBar" style="width:50%; background:var(--cyan);"></i></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; color:var(--text-muted);"><span>CURL (YAW)</span><strong id="flowCurlVal" style="color:var(--amber);">+0.00</strong></div>
+                <div class="activity-track" style="height:5px; margin-top:3px;"><i id="flowCurlBar" style="width:50%; background:var(--amber);"></i></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:8px; align-items:center;">
+              <span style="color:var(--text-muted);">EB COMPASS BUMP:</span>
+              <span id="ebHeadingVal" style="color:var(--green); font-weight:bold;">+0.0° (R=0.90)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:6px; align-items:center;">
+              <span style="color:var(--text-muted);">MB VALENCE (KC→MBON):</span>
+              <span id="mbValenceVal" style="color:var(--cyan); font-weight:bold;">+0.00 (PPL1 DA 0.00)</span>
+            </div>
+          </div>
         </section>
 
         <section class="panel retina-panel">
