@@ -1,6 +1,6 @@
 # FlyDoom: Neuromorphic *Drosophila* Connectome Twin Playing DOOM (1993)
 
-[![CI Tests](https://img.shields.io/badge/tests-97%20passed-brightgreen.svg)](tests/)
+[![CI Tests](https://img.shields.io/badge/tests-104%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Connectome](https://img.shields.io/badge/connectome-Janelia%20MaleCNS%20%7C%20FlyWire-purple.svg)](https://flywire.ai/)
 [![DOOM Engine](https://img.shields.io/badge/engine-GZDoom%20Native%20%7C%20E1M1-red.svg)](https://zdoom.org/)
@@ -87,6 +87,8 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
 - **128 Retinotopic Cartridges**: Linking 64 left and 64 right visual columns across $-30^\circ$ to $+30^\circ$ azimuth.
 - **2D Optic Flow Decomposition**: Vector Helmholtz-Hodge decomposition separating forward looming ($\nabla \cdot \vec{v}$), rotational curl ($\nabla \times \vec{v}$), and bulk translation.
 - **16-Wedge EB Continuous Attractor (CAN)**: Real-time heading integration modeling Drosophila $E\text{-}PG$ compass neurons, $P\text{-}EN$ angular velocity shift neurons, and $\Delta 7$ global inhibition.
+- **Fan-Shaped Body (FB) Goal-Vector Navigation**: 8-column columnar matrix ($P\text{-}FN \to h\Delta B \to PFL3$) calculating allocentric goal-heading discrepancy vectors $\vec{\Delta} = \vec{\theta}_{\text{goal}} - \vec{\theta}_{\text{head}}$ and graded forward thrust.
+- **SEZ Nociceptive Hazard Reflex & AMMC Wall Slip**: Ventral ommatidial green chrominance filtering detecting toxic nukage acid pools to prevent environmental damage, coupled with antennal mechanosensory corner slip reflexes.
 - **14 Canonical SWC Skeletons**: Direct morphological neuron reconstructions spanning visual ON-motion (`Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`), visual OFF-motion (`T5a`), looming projection (`LC4`), central complex steering (`E-PG`, `P-EN`), mushroom body associative memory (`KC`, `MBON-gamma1pedc`, `PPL1-gamma1pedc`), and motor output (`DNpe017`, `T2_Motor`).
 - **262 Submicron Chemical Active Zones**: Pre- and post-synaptic contacts labeled with physiological neurotransmitters: Acetylcholine (206 ACh), GABA (30 GABA), Glutamate (18 Glu), and Dopamine (8 modulatory Dopamine contacts).
 
@@ -300,7 +302,7 @@ uv sync
 
 ```bash
 uv run pytest
-# 83 passed in 1.6s
+# 104 passed in 1.7s
 ```
 
 ### 3. Record Live Gameplay with 3D Nervous System Twin
@@ -356,11 +358,12 @@ flydoom/
 │       ├── dynamics/                      # Biophysical differential equation engines
 │       │   ├── central_complex_ring.py    # 16-wedge continuous attractor network (CAN)
 │       │   ├── compartmental_t4.py        # Model A, B, C, and D active dendritic trees
+│       │   ├── fan_shaped_body.py         # 8-column FB vector steering, SEZ acid, AMMC slip
 │       │   ├── mushroom_body.py           # Sparse KC expansion & PPL1/PAM plasticity
 │       │   └── optic_flow.py              # 128-cartridge retinotopic array & 2D flow decomposition
 │       └── sensory/                       # Ommatidial visual encoders
 │           └── encoders/delta.py          # Hexagonal lattice & temporal differencing
-├── tests/                                 # 97 unit & integration tests
+├── tests/                                 # 104 unit & integration tests
 ├── web/                                   # Web Observatory & visualization application
 │   ├── app.js                             # Live hologram canvas renderer & telemetry UI
 │   ├── fly_3d_visible_nervous_system.html # Standalone 3D Connectome Observatory

@@ -250,7 +250,9 @@ def render_3d_nervous_system(
 
     mb_val = float(neural_state.get("mb_valence", 0.0) or 0.0)
     mb_ppl1 = float(neural_state.get("mb_ppl1_da", 0.0) or 0.0)
-    draw.text((20, height - 38), f"MOTOR: {action} · 128 CARTRIDGES · 16 EB WEDGES · MB VALENCE: {mb_val:+.2f} (PPL1 DA {mb_ppl1:.2f})", fill=(120, 150, 160))
+    fb_torque = float(neural_state.get("fb_steer_torque", 0.0) or 0.0)
+    sez_acid = float(neural_state.get("sez_acid_detected", 0.0) or 0.0)
+    draw.text((20, height - 38), f"MOTOR: {action} · FB STEER: {fb_torque:+.2f} · SEZ HAZARD: {'ACID' if sez_acid > 0 else 'CLEAR'} · MB VALENCE: {mb_val:+.2f}", fill=(120, 150, 160))
 
     return img
 

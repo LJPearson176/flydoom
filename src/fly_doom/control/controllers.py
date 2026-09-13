@@ -36,6 +36,12 @@ from fly_doom.dynamics.compartmental_t4 import (
 from fly_doom.dynamics.optic_flow import OpticFlowDecomposer, RetinotopicT4ArrayEngine
 from fly_doom.dynamics.central_complex_ring import EllipsoidBodyRingAttractor
 from fly_doom.dynamics.mushroom_body import MushroomBodyPlasticityEngine
+from fly_doom.dynamics.fan_shaped_body import (
+    AMMCWallSlipReflex,
+    FanShapedBodyVectorEngine,
+    SEZNociceptiveReflex,
+    Stage1WaypointGraph,
+)
 from fly_doom.sensory.encoders.delta import EncoderDelta
 
 
@@ -469,6 +475,10 @@ class DoorSeekingController:
         self._last_action = DoomAction.NOOP
         self._last_health: Optional[float] = None
         self._threat_ticks = 0
+        self.fb_engine = FanShapedBodyVectorEngine()
+        self.sez_reflex = SEZNociceptiveReflex()
+        self.ammc_reflex = AMMCWallSlipReflex(stall_ticks=self.stall_ticks)
+        self.waypoint_graph = Stage1WaypointGraph()
         self.last_neural_state: Dict[str, float] = {}
 
     @staticmethod
@@ -595,6 +605,26 @@ class DoorSeekingController:
                     else:
                         threat_action = DoomAction.FORWARD
 
+        # Biological Fan-Shaped Body (FB) Vector Navigation
+        fb_steer = 0.0
+        fb_thrust = 1.0
+        if position is not None and angle_deg is not None and target_angle is not None:
+            head_rad = math.radians(angle_deg)
+            target_pos = (
+                position[0] + 200.0 * math.cos(math.radians(target_angle)),
+                position[1] + 200.0 * math.sin(math.radians(target_angle)),
+            )
+            fb_steer, fb_thrust, _ = self.fb_engine.compute_vector_steering(
+                current_heading_rad=head_rad,
+                goal_pos=target_pos,
+                current_pos=position,
+            )
+
+        # Biological Subesophageal Zone (SEZ) Ventral Nukage Hazard Reflex
+        acid_detected, acid_bias, acid_frac = self.sez_reflex.evaluate_retinal_hazard(obs.rgb)
+        if acid_detected and in_enemy_arena and threat_action is None and combat_action is None:
+            threat_action = DoomAction.TURN_LEFT if acid_bias > 0 else DoomAction.TURN_RIGHT
+
         base_action = self.base.select_action(obs)
         candidate = self._door_candidate(obs) or at_door_threshold
 
@@ -630,6 +660,17 @@ class DoorSeekingController:
         elif perspective_action is not None:
             action = perspective_action
 
+        # Biological Antennal Mechanosensory (AMMC) Tactile Wall-Slip Reflex
+        ammc_active = False
+        ammc_torque = 0.0
+        if position is not None:
+            ammc_active, ammc_torque = self.ammc_reflex.update(
+                current_pos=position,
+                is_forward_commanded=(action == DoomAction.FORWARD),
+            )
+            if ammc_active and not candidate and not at_door_threshold and combat_action is None:
+                action = DoomAction.TURN_LEFT if ammc_torque > 0 else DoomAction.TURN_RIGHT
+
         self._last_position = position
         self._last_action = action
         self._last_health = float(obs.health)
@@ -646,11 +687,18 @@ class DoorSeekingController:
             "health_priority_active": 1.0 if threat_action is not None else 0.0,
             "health_delta": health_delta,
             "threat_refractory_ticks": float(self._threat_ticks),
+            "fb_steer_torque": float(fb_steer),
+            "fb_forward_drive": float(fb_thrust),
+            "sez_acid_detected": 1.0 if acid_detected else 0.0,
+            "sez_acid_intensity": float(acid_frac),
+            "ammc_slip_active": 1.0 if ammc_active else 0.0,
         })
         return action
 
     def reset(self) -> None:
         self.base.reset()
+        self.ammc_reflex.reset()
+        self.waypoint_graph.reset()
         self._stalled_ticks = 0
         self._use_cooldown = 0
         self._last_position = None

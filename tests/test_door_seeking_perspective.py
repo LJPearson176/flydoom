@@ -197,3 +197,18 @@ def test_zone5_live_target_acquisition_and_fire():
     assert state["enemy_target_id"] == 100.0
     assert state["target_angle_deg"] == pytest.approx(6.16, abs=0.5)
     assert state["firing_solution_locked"] == 1.0
+
+
+def test_fb_and_sez_biological_telemetry():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+    obs = _make_obs(x=1200.0, y=-2800.0, angle_deg=42.0)
+    controller.select_action(obs)
+    state = controller.get_neural_state()
+
+    assert "fb_steer_torque" in state
+    assert "fb_forward_drive" in state
+    assert "sez_acid_detected" in state
+    assert "ammc_slip_active" in state
+    assert state["fb_forward_drive"] > 0.8
+    assert state["sez_acid_detected"] == 0.0
