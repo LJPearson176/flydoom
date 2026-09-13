@@ -1,6 +1,6 @@
 # FlyDoom: Neuromorphic *Drosophila* Connectome Twin Playing DOOM (1993)
 
-[![CI Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen.svg)](tests/)
+[![CI Tests](https://img.shields.io/badge/tests-97%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Connectome](https://img.shields.io/badge/connectome-Janelia%20MaleCNS%20%7C%20FlyWire-purple.svg)](https://flywire.ai/)
 [![DOOM Engine](https://img.shields.io/badge/engine-GZDoom%20Native%20%7C%20E1M1-red.svg)](https://zdoom.org/)
@@ -25,6 +25,7 @@ An anatomically and biophysically authentic *Drosophila melanogaster* digital tw
 - [Biophysical Multi-Compartment T4 Circuit (Model D)](#biophysical-multi-compartment-t4-circuit-model-d)
 - [2D Optic Flow Field Decomposition & LPTC-HS](#2d-optic-flow-field-decomposition--lptc-hs)
 - [Central Complex Ellipsoid Body Ring Attractor (CAN)](#central-complex-ellipsoid-body-ring-attractor-can)
+- [Mushroom Body Dopaminergic Plasticity & Threat Learning](#mushroom-body-dopaminergic-plasticity--threat-learning)
 - [Central Complex & Descending Motor Control](#central-complex--descending-motor-control)
 - [Connectome Lesion & Combat Analysis](#connectome-lesion--combat-analysis)
 - [Interactive 3D Connectome Observatory](#interactive-3d-connectome-observatory)
@@ -170,6 +171,21 @@ Spatial heading is maintained by a 16-wedge continuous attractor network (CAN) i
 - **$\Delta 7$ Global Inhibition**: Enforces winner-take-all sparsity, sustaining a sharp unimodal activity bump ($R \ge 0.85$).
 - **$P\text{-}EN$ Phase-Shift Interneurons**: Ingests optomotor yaw slip ($\omega_{\text{vis}}$ from $LPTC\text{-}HS$) and motor efference copy ($\omega_{\text{motor}}$ from saccadic turns) to smoothly pull the activity bump around the toroid.
 - **Persistent Spatial Memory**: When stationary or navigating straight corridors, the bump holds its angular position without drift, providing an internal compass heading.
+
+---
+
+## Mushroom Body Dopaminergic Plasticity & Threat Learning
+
+Spatial hazard avoidance and associative reinforcement are mediated by the Mushroom Body (MB) circuit:
+
+- **Kenyon Cell (KC) Calyx Expansion**: 64 Kenyon cells receive multi-modal spatial context vectors, sparsified by $k$-Winner-Take-All selection ($k=6$, ~10% sparsity).
+- **Dual Antagonistic MBON Compartments**:
+  - $MBON_{\text{app}}$ (e.g. $MBON\text{-}\gamma 1 pedc$): Approach-promoting output neuron driving forward exploration.
+  - $MBON_{\text{av}}$ (e.g. $MBON\text{-}\gamma 2\alpha'1$): Avoidance-promoting output neuron driving evasive steering.
+- **Dopamine-Gated Three-Factor Plasticity**:
+  - **Aversive $PPL1$ Dopamine**: A drop in health ($\Delta \text{HP} < 0$) triggers a $PPL1$ dopamine burst that induces heterosynaptic Long-Term Depression (LTD) on active $KC \to MBON_{\text{app}}$ synapses ($\Delta W = -\eta \cdot k_i \cdot DA$).
+  - **Reward $PAM$ Dopamine**: Neutralizing a hostile or collecting items triggers a $PAM$ dopamine burst, depressing avoidance synapses.
+- **Valence-Gated Steering Modulation**: The net valence $V_{\text{MB}} \in [-1.0, 1.0]$ biases Central Complex motor steering, ensuring the fly actively learns to steer away from previously hazardous locations.
 
 ---
 
@@ -340,10 +356,11 @@ flydoom/
 │       ├── dynamics/                      # Biophysical differential equation engines
 │       │   ├── central_complex_ring.py    # 16-wedge continuous attractor network (CAN)
 │       │   ├── compartmental_t4.py        # Model A, B, C, and D active dendritic trees
+│       │   ├── mushroom_body.py           # Sparse KC expansion & PPL1/PAM plasticity
 │       │   └── optic_flow.py              # 128-cartridge retinotopic array & 2D flow decomposition
 │       └── sensory/                       # Ommatidial visual encoders
 │           └── encoders/delta.py          # Hexagonal lattice & temporal differencing
-├── tests/                                 # 93 unit & integration tests
+├── tests/                                 # 97 unit & integration tests
 ├── web/                                   # Web Observatory & visualization application
 │   ├── app.js                             # Live hologram canvas renderer & telemetry UI
 │   ├── fly_3d_visible_nervous_system.html # Standalone 3D Connectome Observatory
@@ -374,6 +391,11 @@ If you build upon FlyDoom in your scientific or computational neuroscience resea
 - **Green, J., Adachi, A., Shah, K. K., Hirokawa, J. D., Magani, P. S., & Maimon, G. (2017).** A neural circuit architecture for angular integration in Drosophila. *Nature*, 546(7656), 101–106. [doi:10.1038/nature22343](https://doi.org/10.1038/nature22343)
 - **Turner-Evans, D. et al. (2020).** The neuroanatomical infrastructure and function of the Drosophila central complex. *eLife*, 9, e56779. [doi:10.7554/eLife.56779](https://doi.org/10.7554/eLife.56779)
 - **Hulse, B. K. et al. (2021).** A connectome of the Drosophila central complex provides roadmap for sensory-motor integration. *eLife*, 10, e66039.
+
+### Mushroom Body & Associative Learning
+- **Aso, Y. et al. (2014).** The neuronal architecture of the mushroom body provides a logic for associative learning. *eLife*, 3, e04577. [doi:10.7554/eLife.04577](https://doi.org/10.7554/eLife.04577)
+- **Handler, A. et al. (2019).** Distinct dopamine receptor types define opposing functions of a single dopamine neuron in associative learning. *Nature*, 566, 538–542. [doi:10.1038/s41586-019-0939-2](https://doi.org/10.1038/s41586-019-0939-2)
+- **Hige, T. (2018).** What can the fly mushroom body teach us about associative learning? *Neurobiology of Learning and Memory*, 153, 9–17.
 
 ### Descending Pathways & Motor Neuromeres
 - **Namiki, S., Dickinson, M. H., Wong, A. M., Korff, W., & Card, G. M. (2018).** The functional organization of descending motor pathways in Drosophila. *eLife*, 7, e34272. [doi:10.7554/eLife.34272](https://doi.org/10.7554/eLife.34272)

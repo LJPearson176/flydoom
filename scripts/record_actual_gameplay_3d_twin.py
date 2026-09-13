@@ -248,8 +248,9 @@ def render_3d_nervous_system(
     elif asym < -0.04:
         circ_desc = f"LEFT MEDULLA M1-M10 -> LOP T4a/T5a -> LEFT YAW ({asym:.3f})"
 
-    draw.text((20, height - 58), f"ACTIVE BIOPHYSICAL CIRCUIT: {circ_desc}", fill=(220, 235, 240))
-    draw.text((20, height - 38), f"MOTOR COMMAND: {action} · 128 CARTRIDGES · 16 EB WEDGES · 178 SYNAPSES ACTIVE", fill=(120, 150, 160))
+    mb_val = float(neural_state.get("mb_valence", 0.0) or 0.0)
+    mb_ppl1 = float(neural_state.get("mb_ppl1_da", 0.0) or 0.0)
+    draw.text((20, height - 38), f"MOTOR: {action} · 128 CARTRIDGES · 16 EB WEDGES · MB VALENCE: {mb_val:+.2f} (PPL1 DA {mb_ppl1:.2f})", fill=(120, 150, 160))
 
     return img
 

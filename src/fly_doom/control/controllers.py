@@ -35,6 +35,7 @@ from fly_doom.dynamics.compartmental_t4 import (
 )
 from fly_doom.dynamics.optic_flow import OpticFlowDecomposer, RetinotopicT4ArrayEngine
 from fly_doom.dynamics.central_complex_ring import EllipsoidBodyRingAttractor
+from fly_doom.dynamics.mushroom_body import MushroomBodyPlasticityEngine
 from fly_doom.sensory.encoders.delta import EncoderDelta
 
 
@@ -150,6 +151,7 @@ class ControlledT4Controller:
         saccade_refractory_ticks: int = 0,
         use_population_flow: bool = True,
         use_ring_attractor: bool = True,
+        use_mushroom_body: bool = True,
     ):
         self.model_type = model_type
         self.knockouts = synaptic_knockouts or set()
@@ -157,6 +159,7 @@ class ControlledT4Controller:
         self._saccade_cooldown = 0
         self.use_population_flow = use_population_flow
         self.use_ring_attractor = use_ring_attractor
+        self.use_mushroom_body = use_mushroom_body
 
         ko_str = f"_{'-'.join(sorted(self.knockouts))}_KO" if self.knockouts else ""
         self.name = custom_name or f"T4_{model_type.name}{ko_str}"
@@ -181,7 +184,10 @@ class ControlledT4Controller:
         self.t4_array = RetinotopicT4ArrayEngine(rows=8, cols=8, params=self.params)
         self.optic_flow_decomposer = OpticFlowDecomposer(rows=8, cols=8)
         self.eb_ring_attractor = EllipsoidBodyRingAttractor(num_wedges=16, dt_ms=self.dt_ms)
+        self.mushroom_body = MushroomBodyPlasticityEngine()
         self._last_action = DoomAction.NOOP
+        self._last_health: Optional[float] = None
+        self._last_kill_count: Optional[int] = None
         self.last_neural_state: Dict[str, float] = {}
 
     def reset(self) -> None:
@@ -190,9 +196,12 @@ class ControlledT4Controller:
         self.t4_right.reset()
         self.t4_array.reset()
         self.eb_ring_attractor.reset()
+        self.mushroom_body.last_kc_activations.fill(0.0)
         self.last_neural_state = {}
         self._saccade_cooldown = 0
         self._last_action = DoomAction.NOOP
+        self._last_health = None
+        self._last_kill_count = None
 
     def select_action(self, obs: DoomObservation) -> DoomAction:
         # 1. Sensory Projection
@@ -346,7 +355,43 @@ class ControlledT4Controller:
                 "eb_angular_velocity": float(net_omega),
             })
 
-        # 4. FROZEN SCALE-INVARIANT MOTOR DECODER POLICY
+        # 4. Mushroom Body Associative Learning & Spatial Valence
+        if self.use_mushroom_body:
+            # Construct 16-dimensional spatial context vector from row and col profile
+            feat_rows = np.mean(on_currents, axis=1)
+            feat_cols = np.mean(on_currents, axis=0)
+            sensory_feat = np.concatenate([feat_rows, feat_cols])
+            feat_norm = float(np.linalg.norm(sensory_feat))
+            if feat_norm > 1e-4:
+                sensory_feat = sensory_feat / feat_norm
+
+            # Reinforcement triggers: PPL1 aversive (health drop) & PAM reward (kill)
+            aversive_us = 0.0
+            if self._last_health is not None and obs.health < self._last_health:
+                aversive_us = min(1.0, float(self._last_health - obs.health) / 10.0)
+            self._last_health = float(obs.health)
+
+            reward_us = 0.0
+            if self._last_kill_count is not None and obs.kill_count > self._last_kill_count:
+                reward_us = 1.0
+            self._last_kill_count = int(obs.kill_count)
+
+            mb_state = self.mushroom_body.step(sensory_feat, aversive_us=aversive_us, reward_us=reward_us)
+            self.last_neural_state.update({
+                "mb_valence": float(mb_state.valence),
+                "mb_mbon_app": float(mb_state.mbon_app_drive),
+                "mb_mbon_av": float(mb_state.mbon_av_drive),
+                "mb_ppl1_da": float(mb_state.ppl1_dopamine),
+                "mb_pam_da": float(mb_state.pam_dopamine),
+                "mb_active_kc_count": float(len(mb_state.active_kc_indices)),
+            })
+
+            # Threat avoidance modulation: if valence is negative, bias steering away from threat
+            if mb_state.valence < -0.20:
+                avoidance_bias = -0.25 if norm_asymmetry >= 0.0 else 0.25
+                norm_asymmetry = float(np.clip(norm_asymmetry + avoidance_bias, -1.0, 1.0))
+
+        # 5. FROZEN SCALE-INVARIANT MOTOR DECODER POLICY
         steer_threshold = 0.15  # 15% normalized lateral motion asymmetry
         fire_depth_max = 3.50
         fire_motion_min = 0.35
