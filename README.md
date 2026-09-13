@@ -1,6 +1,6 @@
 # FlyDoom: Neuromorphic *Drosophila* Connectome Twin Playing DOOM (1993)
 
-[![CI Tests](https://img.shields.io/badge/tests-104%20passed-brightgreen.svg)](tests/)
+[![CI Tests](https://img.shields.io/badge/tests-107%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Connectome](https://img.shields.io/badge/connectome-Janelia%20MaleCNS%20%7C%20FlyWire-purple.svg)](https://flywire.ai/)
 [![DOOM Engine](https://img.shields.io/badge/engine-GZDoom%20Native%20%7C%20E1M1-red.svg)](https://zdoom.org/)
@@ -302,7 +302,7 @@ uv sync
 
 ```bash
 uv run pytest
-# 104 passed in 1.7s
+# 107 passed in 1.7s
 ```
 
 ### 3. Record Live Gameplay with 3D Nervous System Twin
@@ -363,7 +363,7 @@ flydoom/
 │       │   └── optic_flow.py              # 128-cartridge retinotopic array & 2D flow decomposition
 │       └── sensory/                       # Ommatidial visual encoders
 │           └── encoders/delta.py          # Hexagonal lattice & temporal differencing
-├── tests/                                 # 104 unit & integration tests
+├── tests/                                 # 107 unit & integration tests
 ├── web/                                   # Web Observatory & visualization application
 │   ├── app.js                             # Live hologram canvas renderer & telemetry UI
 │   ├── fly_3d_visible_nervous_system.html # Standalone 3D Connectome Observatory

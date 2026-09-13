@@ -212,3 +212,36 @@ def test_fb_and_sez_biological_telemetry():
     assert "ammc_slip_active" in state
     assert state["fb_forward_drive"] > 0.8
     assert state["sez_acid_detected"] == 0.0
+
+
+def test_zone6_staircase_navigation_after_kills():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+    obs = _make_obs(x=2400.0, y=-2600.0, angle_deg=0.0, kill_count=2)
+    controller.select_action(obs)
+    state = controller.get_neural_state()
+    assert state["enemy_target_id"] == 300.0  # Zone 6: Staircase
+    # dx = 2800 - 2400 = 400, dy = -2800 - (-2600) = -200 -> atan2(-200, 400) ~ -26.56 deg
+    assert state["target_angle_deg"] == pytest.approx(-26.56, abs=1.0)
+
+
+def test_zone7_exit_chamber_switch_navigation():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+    obs = _make_obs(x=2700.0, y=-3000.0, angle_deg=-45.0, kill_count=2)
+    controller.select_action(obs)
+    state = controller.get_neural_state()
+    assert state["enemy_target_id"] == 400.0  # Zone 7: Exit Chamber Switch
+    # dx = 3100 - 2700 = 400, dy = -3600 - (-3000) = -600 -> atan2(-600, 400) ~ -56.3 deg
+    assert state["target_angle_deg"] == pytest.approx(-56.3, abs=1.0)
+
+
+def test_zone7_exit_switch_actuation():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, stall_ticks=2, manage_perspective=True)
+    # Positioned squarely in front of exit switch linedef
+    obs = _make_obs(x=3050.0, y=-3580.0, angle_deg=-90.0, kill_count=2)
+    action = controller.select_action(obs)
+    assert action == DoomAction.USE
+    state = controller.get_neural_state()
+    assert state["at_exit_switch"] == 1.0

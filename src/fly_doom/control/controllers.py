@@ -524,6 +524,7 @@ class DoorSeekingController:
         at_door_threshold = False
         in_enemy_arena = False
         enemy_target_id = 0
+        has_live_target = False
 
         curr_x: Optional[float] = None
         curr_y: Optional[float] = None
@@ -533,7 +534,7 @@ class DoorSeekingController:
             in_enemy_arena = curr_x >= 1664.0
 
             # Zone 1: In spawn corridor before the hallway turn
-            if curr_y < -3300.0:
+            if curr_x < 1200.0 and curr_y < -3300.0:
                 target_angle = 90.0
                 deadband = 15.0
             # Zone 2: Hallway turn - moving forward and to the right toward the door alcove
@@ -569,9 +570,15 @@ class DoorSeekingController:
                     target_enemy = self.enemy2_pos
                     enemy_target_id = 2
                     has_live_target = True
-                else:
+                elif curr_x < 2200.0:
                     target_enemy = (2272.0, -2432.0)
                     enemy_target_id = 200
+                elif curr_x < 2650.0:
+                    target_enemy = (2800.0, -2800.0)
+                    enemy_target_id = 300
+                else:
+                    target_enemy = (3100.0, -3600.0)
+                    enemy_target_id = 400
 
                 dx = target_enemy[0] - curr_x
                 dy = target_enemy[1] - curr_y
@@ -636,6 +643,13 @@ class DoorSeekingController:
 
         action = base_action
 
+        at_exit_switch = (
+            curr_x is not None
+            and curr_y is not None
+            and curr_x >= 2950.0
+            and curr_y <= -3450.0
+        )
+
         # Door interaction takes priority when stalled in front of the door
         if (
             self._stalled_ticks >= self.stall_ticks
@@ -649,7 +663,11 @@ class DoorSeekingController:
                 self._use_cooldown = self.use_cooldown_ticks
                 self._stalled_ticks = 0
         elif in_enemy_arena:
-            if threat_action is not None:
+            if at_exit_switch and (self._stalled_ticks >= 2 or abs(curr_y - (-3600.0)) < 80.0) and self._use_cooldown == 0:
+                action = DoomAction.USE
+                self._use_cooldown = self.use_cooldown_ticks
+                self._stalled_ticks = 0
+            elif threat_action is not None:
                 action = threat_action
             elif combat_action is not None:
                 action = combat_action
@@ -692,6 +710,7 @@ class DoorSeekingController:
             "sez_acid_detected": 1.0 if acid_detected else 0.0,
             "sez_acid_intensity": float(acid_frac),
             "ammc_slip_active": 1.0 if ammc_active else 0.0,
+            "at_exit_switch": 1.0 if at_exit_switch else 0.0,
         })
         return action
 
