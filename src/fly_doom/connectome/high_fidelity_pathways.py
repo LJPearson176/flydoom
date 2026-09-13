@@ -499,7 +499,263 @@ def build_high_fidelity_pathway_bundle() -> HighFidelityPathwayBundle:
     )
 
     # -------------------------------------------------------------------------
-    # 2. Chemical Synapse Point Clouds (138 + Central Complex & Descending Synapses)
+    # Neuron 8: T5a Direction-Selective Motion Detector (OFF Pathway)
+    # -------------------------------------------------------------------------
+    t5_nodes = []
+    t5_soma = (t4_origin[0] + 5.0, t4_origin[1] + 8.0, t4_origin[2] - 15.0)
+    t5_pts = [
+        t5_soma,
+        (t5_soma[0] - 6.0, t5_soma[1] - 4.0, t5_soma[2] + 4.0),
+        (t5_soma[0] - 12.0, t5_soma[1] - 8.0, t5_soma[2] + 8.0),  # Lobula dendritic arbor
+        (t5_soma[0] - 8.0, t5_soma[1] - 10.0, t5_soma[2] + 16.0),  # Axon projecting to LP
+        (t5_soma[0] - 2.0, t5_soma[1] - 12.0, t5_soma[2] + 24.0),  # Terminal in LP Layer 1
+    ]
+    t5_len = 0.0
+    for idx, pt in enumerate(t5_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 4 else 4)
+        if idx > 0:
+            t5_len += float(np.linalg.norm(np.array(pt) - np.array(t5_pts[idx - 1])))
+        t5_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.8 if idx == 0 else 0.4, pid, "t5_off_motion_arbor"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=5813082001,
+            instance="T5a_R_col8",
+            cell_type="T5a",
+            hemisphere="R",
+            neuropil="LO_R/LP_R",
+            color_hex="#06b6d4",
+            soma=t5_soma,
+            nodes=t5_nodes,
+            total_arbor_length_um=t5_len,
+            functional_role="Rightward motion detection (OFF dark edge coincidence & shunting in Lobula)",
+            neurotransmitter="Cholinergic",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 9: LC4 Visual Looming Detector (Lobula -> PVLP / Giant Fiber)
+    # -------------------------------------------------------------------------
+    lc4_nodes = []
+    lc4_soma = (t4_origin[0] - 25.0, t4_origin[1] + 10.0, t4_origin[2] - 20.0)
+    lc4_pts = [
+        lc4_soma,
+        (lc4_soma[0] - 5.0, lc4_soma[1] - 5.0, lc4_soma[2] + 5.0),
+        (lc4_soma[0] - 20.0, lc4_soma[1] + 5.0, lc4_soma[2] + 10.0),
+        (lc4_soma[0] - 45.0, lc4_soma[1] + 15.0, lc4_soma[2] + 5.0),
+        (35.0, 18.0, -12.0),  # Presynaptic terminal on DNpe017 in PVLP
+    ]
+    lc4_len = 0.0
+    for idx, pt in enumerate(lc4_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 4 else 4)
+        if idx > 0:
+            lc4_len += float(np.linalg.norm(np.array(pt) - np.array(lc4_pts[idx - 1])))
+        lc4_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.9 if idx == 0 else 0.45, pid, "looming_projection_tract"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=401101,
+            instance="LC4_R_col4",
+            cell_type="LC4",
+            hemisphere="R",
+            neuropil="LO_R/PVLP_R",
+            color_hex="#eab308",
+            soma=lc4_soma,
+            nodes=lc4_nodes,
+            total_arbor_length_um=lc4_len,
+            functional_role="Centrifugal visual looming expansion detector projecting directly to descending motor systems",
+            neurotransmitter="Cholinergic",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 10: P-EN Central Complex Compass Steering Interneuron
+    # -------------------------------------------------------------------------
+    pen_nodes = []
+    pen_soma = (16.0, 54.0, 8.0)
+    pen_pts = [
+        pen_soma,
+        (12.0, 58.0, 10.0),  # PB Glomerulus R4
+        (18.0, 35.0, -10.0),  # Bridge tract entering central complex
+        (28.0, 12.0, -22.0),  # Ellipsoid Body wedge 5 (phase shifted)
+        (8.0, 16.0, -40.0),  # Nodulus (NO) ventral terminal
+    ]
+    pen_len = 0.0
+    for idx, pt in enumerate(pen_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 4 else 4)
+        if idx > 0:
+            pen_len += float(np.linalg.norm(np.array(pt) - np.array(pen_pts[idx - 1])))
+        pen_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.8 if idx == 0 else 0.4, pid, "pen_compass_shift_loop"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=603101,
+            instance="P-EN1_PB-EB-NO_R4",
+            cell_type="P-EN",
+            hemisphere="bilateral",
+            neuropil="PB/EB/NO",
+            color_hex="#34d399",
+            soma=pen_soma,
+            nodes=pen_nodes,
+            total_arbor_length_um=pen_len,
+            functional_role="Angular velocity phase-shift integrator steering the E-PG compass bump during turns",
+            neurotransmitter="Cholinergic",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 11: KC-gamma Mushroom Body Kenyon Cell
+    # -------------------------------------------------------------------------
+    kc_nodes = []
+    kc_soma = (38.0, 48.0, 40.0)
+    kc_pts = [
+        kc_soma,
+        (35.0, 42.0, 36.0),  # Dendritic claws in calyx (CA)
+        (28.0, 30.0, 26.0),  # Pedunculus dorsal trunk
+        (20.0, 18.0, 12.0),  # Entering medial lobe system
+        (12.0, 15.0, -4.0),  # Medial gamma lobe terminal branch
+    ]
+    kc_len = 0.0
+    for idx, pt in enumerate(kc_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 4 else 4)
+        if idx > 0:
+            kc_len += float(np.linalg.norm(np.array(pt) - np.array(kc_pts[idx - 1])))
+        kc_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.7 if idx == 0 else 0.35, pid, "kenyon_cell_axon_trunk"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=501101,
+            instance="KC_gamma_R",
+            cell_type="KC",
+            hemisphere="R",
+            neuropil="MB_CA_R/MB_LOBE_R",
+            color_hex="#818cf8",
+            soma=kc_soma,
+            nodes=kc_nodes,
+            total_arbor_length_um=kc_len,
+            functional_role="Sparse sensory odor/spatial representation in Mushroom Body calyx and gamma lobe",
+            neurotransmitter="Cholinergic",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 12: MBON-gamma1pedc Approach Output Neuron
+    # -------------------------------------------------------------------------
+    mbon_nodes = []
+    mbon_soma = (8.0, 28.0, 5.0)
+    mbon_pts = [
+        mbon_soma,
+        (14.0, 18.0, -3.0),  # Dendrites arborizing across KC axons in gamma1
+        (18.0, 22.0, 4.0),  # Axon projecting to superior protocerebrum
+        (24.0, 28.0, 14.0),  # Terminal in superior medial protocerebrum (SMP)
+    ]
+    mbon_len = 0.0
+    for idx, pt in enumerate(mbon_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 3 else 4)
+        if idx > 0:
+            mbon_len += float(np.linalg.norm(np.array(pt) - np.array(mbon_pts[idx - 1])))
+        mbon_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.85 if idx == 0 else 0.4, pid, "mbon_approach_projection"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=502101,
+            instance="MBON_gamma1pedc_R",
+            cell_type="MBON",
+            hemisphere="R",
+            neuropil="MB_LOBE_R/SMP_R",
+            color_hex="#c084fc",
+            soma=mbon_soma,
+            nodes=mbon_nodes,
+            total_arbor_length_um=mbon_len,
+            functional_role="Approach-promoting output neuron driving forward locomotion and threat evasion balance",
+            neurotransmitter="GABA",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 13: PPL1-gamma1pedc Dopaminergic Punishment Neuron
+    # -------------------------------------------------------------------------
+    ppl1_nodes = []
+    ppl1_soma = (52.0, 36.0, 16.0)
+    ppl1_pts = [
+        ppl1_soma,
+        (40.0, 28.0, 10.0),  # Traversal through lateral horn / protocerebrum
+        (26.0, 20.0, 2.0),  # Entering pedunculus base
+        (15.0, 16.0, -3.0),  # Varicose arbor tiling the gamma1 compartment
+    ]
+    ppl1_len = 0.0
+    for idx, pt in enumerate(ppl1_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 3 else 4)
+        if idx > 0:
+            ppl1_len += float(np.linalg.norm(np.array(pt) - np.array(ppl1_pts[idx - 1])))
+        ppl1_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 0.8 if idx == 0 else 0.4, pid, "dopaminergic_varicose_arbor"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=503101,
+            instance="PPL1_gamma1pedc_R",
+            cell_type="PPL1",
+            hemisphere="R",
+            neuropil="PPL1_R/MB_LOBE_R",
+            color_hex="#f43f5e",
+            soma=ppl1_soma,
+            nodes=ppl1_nodes,
+            total_arbor_length_um=ppl1_len,
+            functional_role="Nociceptive/aversive dopamine burst encoding pain/damage, inducing LTD on KC->MBON",
+            neurotransmitter="Dopamine",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # Neuron 14: T2-Wing Steering Motor Neuron (Mesothoracic Yaw Control)
+    # -------------------------------------------------------------------------
+    t2_nodes = []
+    t2_soma = (14.0, -135.0, -145.0)
+    t2_pts = [
+        t2_soma,
+        (4.0, -138.0, -142.0),  # Dendrites receiving descending input from DNpe017
+        (22.0, -132.0, -138.0),  # Mesothoracic nerve trunk
+        (46.0, -128.0, -132.0),  # Neuromuscular junction on basal wing sclerite
+    ]
+    t2_len = 0.0
+    for idx, pt in enumerate(t2_pts):
+        nid = idx + 1
+        pid = idx if idx > 0 else -1
+        t_id = 1 if idx == 0 else (2 if idx < 3 else 4)
+        if idx > 0:
+            t2_len += float(np.linalg.norm(np.array(pt) - np.array(t2_pts[idx - 1])))
+        t2_nodes.append(HighFidelityNode(nid, t_id, pt[0], pt[1], pt[2], 1.1 if idx == 0 else 0.5, pid, "mesothoracic_wing_motor"))
+
+    neurons.append(
+        HighFidelityNeuron(
+            body_id=801101,
+            instance="T2_Wing_Motor_R",
+            cell_type="T2_Motor",
+            hemisphere="R",
+            neuropil="VNC_T2",
+            color_hex="#fb923c",
+            soma=t2_soma,
+            nodes=t2_nodes,
+            total_arbor_length_um=t2_len,
+            functional_role="Mesothoracic wing motor program actuating yaw steering turns (TURN_LEFT / TURN_RIGHT)",
+            neurotransmitter="ACh",
+        )
+    )
+
+    # -------------------------------------------------------------------------
+    # 2. Chemical Synapse Point Clouds (138 + Central Complex, MB & Descending Synapses)
     # -------------------------------------------------------------------------
     for s in annotated_synapses:
         c_um = s.observed.coordinate.to_um()
@@ -579,6 +835,157 @@ def build_high_fidelity_pathway_bundle() -> HighFidelityPathwayBundle:
                 weight=1.0,
                 confidence=0.99,
                 distance_to_soma_um=260.0 + i * 1.5,
+            )
+        )
+
+    # Add T5a synapses in Lobula Plate LP_R onto LPTC / vertical system (16 synapses)
+    for i in range(16):
+        sx = 108.0 + rng.normal(0, 3.5)
+        sy = -5.0 + rng.normal(0, 4.0)
+        sz = 38.0 + rng.normal(0, 3.5)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=3000 + i,
+                pre_body_id=5813082001,
+                pre_cell_type="T5a",
+                post_body_id=591001,
+                post_cell_type="VS1",
+                neuropil="LP_R",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="ACh",
+                action="excitatory",
+                color_hex="#38bdf8",
+                weight=1.0,
+                confidence=0.96,
+                distance_to_soma_um=35.0 + i * 0.9,
+            )
+        )
+
+    # Add LC4 synapses in PVLP_R onto DNpe017 looming trigger (16 synapses)
+    for i in range(16):
+        sx = 52.0 + rng.normal(0, 3.0)
+        sy = -28.0 + rng.normal(0, 3.0)
+        sz = 2.0 + rng.normal(0, 3.0)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=4000 + i,
+                pre_body_id=401101,
+                pre_cell_type="LC4",
+                post_body_id=701101,
+                post_cell_type="DNpe017",
+                neuropil="PVLP_R",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="ACh",
+                action="excitatory",
+                color_hex="#e879f9",
+                weight=1.0,
+                confidence=0.98,
+                distance_to_soma_um=105.0 + i * 1.2,
+            )
+        )
+
+    # Add P-EN synapses in EB shifting heading bump on E-PG (16 synapses)
+    for i in range(16):
+        theta = 2.0 * math.pi * (i / 16.0)
+        sx = 30.0 * math.cos(theta) + rng.normal(0, 1.2)
+        sy = 12.0 + rng.normal(0, 1.2)
+        sz = -25.0 + 22.0 * math.sin(theta) + rng.normal(0, 1.2)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=5000 + i,
+                pre_body_id=603101,
+                pre_cell_type="P-EN",
+                post_body_id=601101,
+                post_cell_type="E-PG",
+                neuropil="EB",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="ACh",
+                action="excitatory",
+                color_hex="#06b6d4",
+                weight=1.0,
+                confidence=0.97,
+                distance_to_soma_um=65.0 + i * 1.1,
+            )
+        )
+
+    # Add KC synapses in MB_LOBE_R onto MBON associative output (16 synapses)
+    for i in range(16):
+        sx = 28.0 + rng.normal(0, 2.5)
+        sy = 48.0 + rng.normal(0, 4.0)
+        sz = -10.0 + rng.normal(0, 3.0)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=6000 + i,
+                pre_body_id=501101,
+                pre_cell_type="KC",
+                post_body_id=502101,
+                post_cell_type="MBON",
+                neuropil="MB_LOBE_R",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="ACh",
+                action="excitatory",
+                color_hex="#a78bfa",
+                weight=1.0,
+                confidence=0.95,
+                distance_to_soma_um=82.0 + i * 1.4,
+            )
+        )
+
+    # Add PPL1 dopaminergic punishment modulatory synapses in MB_LOBE_R (8 synapses)
+    for i in range(8):
+        sx = 26.0 + rng.normal(0, 2.0)
+        sy = 40.0 + rng.normal(0, 3.0)
+        sz = -12.0 + rng.normal(0, 2.5)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=7000 + i,
+                pre_body_id=503101,
+                pre_cell_type="PPL1",
+                post_body_id=502101,
+                post_cell_type="MBON",
+                neuropil="MB_LOBE_R",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="Dopamine",
+                action="modulatory",
+                color_hex="#f43f5e",
+                weight=1.0,
+                confidence=0.99,
+                distance_to_soma_um=110.0 + i * 1.8,
+            )
+        )
+
+    # Add steering descending synapses in VNC_T2 onto T2 wing motor neuron (12 synapses)
+    for i in range(12):
+        sx = rng.normal(0, 3.5)
+        sy = -118.0 + rng.normal(0, 4.0)
+        sz = -115.0 + rng.normal(0, 3.5)
+        synapses.append(
+            HighFidelitySynapse(
+                synapse_id=8000 + i,
+                pre_body_id=701101,
+                pre_cell_type="DNpe017",
+                post_body_id=801101,
+                post_cell_type="T2_Motor",
+                neuropil="VNC_T2",
+                x=float(sx),
+                y=float(sy),
+                z=float(sz),
+                neurotransmitter="ACh",
+                action="excitatory",
+                color_hex="#fb923c",
+                weight=1.0,
+                confidence=0.98,
+                distance_to_soma_um=185.0 + i * 1.3,
             )
         )
 

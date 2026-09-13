@@ -28,6 +28,9 @@ def test_fly_3d_cns_model_structure():
     assert len(model["exoskeleton"]["lines"]) >= 700, "Exoskeleton must have at least 700 cuticle lines"
     assert "connectome" in model
     assert len(model["connectome"]["fibers"]) == 3030, "Must have exactly 3,030 FlyWire connectome fibers"
+    assert "high_fidelity_pathways" in model
+    assert len(model["high_fidelity_pathways"]["neurons"]) == 14
+    assert len(model["high_fidelity_pathways"]["synapses"]) == 262
 
 
 def test_compiled_3d_viewer_html():

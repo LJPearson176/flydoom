@@ -10,13 +10,17 @@ from fly_doom.connectome.high_fidelity_pathways import (
 def test_high_fidelity_pathway_bundle_generation():
     bundle = build_high_fidelity_pathway_bundle()
     assert isinstance(bundle, HighFidelityPathwayBundle)
-    assert len(bundle.neurons) >= 7
-    assert len(bundle.synapses) >= 170
+    assert len(bundle.neurons) == 14
+    assert len(bundle.synapses) >= 260
     assert len(bundle.cartridges) == 128
 
     # Test neuron types
     cell_types = {n.cell_type for n in bundle.neurons}
-    assert {"T4a", "Mi1", "Tm3", "Mi4", "Mi9", "E-PG", "DNpe017"} <= cell_types
+    expected_types = {
+        "T4a", "Mi1", "Tm3", "Mi4", "Mi9", "E-PG", "DNpe017",
+        "T5a", "LC4", "P-EN", "KC", "MBON", "PPL1", "T2_Motor",
+    }
+    assert expected_types <= cell_types
 
     # Test tree topology
     for neuron in bundle.neurons:
@@ -30,9 +34,10 @@ def test_high_fidelity_pathway_bundle_generation():
 def test_synapse_neurotransmitter_and_coordinates():
     bundle = build_high_fidelity_pathway_bundle()
     transmitters = bundle.synapse_counts_by_transmitter
-    assert transmitters["ACh"] >= 100
+    assert transmitters["ACh"] >= 150
     assert transmitters["GABA"] >= 20
     assert transmitters["Glu"] >= 15
+    assert transmitters["Dopamine"] >= 8
 
     for s in bundle.synapses:
         assert s.synapse_id > 0

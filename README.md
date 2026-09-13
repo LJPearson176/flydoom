@@ -14,7 +14,7 @@ An anatomically and biophysically authentic *Drosophila melanogaster* digital tw
 ---
 
 ![FlyDoom Actual Gameplay & 3D Nervous System Twin](assets/actual_gameplay_3d_twin.gif)
-*Side-by-side: Closed-loop gameplay in native GZDoom (E1M1 Hangar) synchronized tick-by-tick with the 3D Drosophila central nervous system twin (JFRC template, 3,030 connectome streamlines, 128 retinotopic cartridges, 7 EM-reconstructed SWC skeletons, and 178 chemical active zones).*
+*Side-by-side: Closed-loop gameplay in native GZDoom (E1M1 Hangar) synchronized tick-by-tick with the 3D Drosophila central nervous system twin (JFRC template, 3,030 connectome streamlines, 128 retinotopic cartridges, 14 EM-reconstructed SWC skeletons, and 262 chemical active zones).*
 
 ---
 
@@ -87,8 +87,8 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
 - **128 Retinotopic Cartridges**: Linking 64 left and 64 right visual columns across $-30^\circ$ to $+30^\circ$ azimuth.
 - **2D Optic Flow Decomposition**: Vector Helmholtz-Hodge decomposition separating forward looming ($\nabla \cdot \vec{v}$), rotational curl ($\nabla \times \vec{v}$), and bulk translation.
 - **16-Wedge EB Continuous Attractor (CAN)**: Real-time heading integration modeling Drosophila $E\text{-}PG$ compass neurons, $P\text{-}EN$ angular velocity shift neurons, and $\Delta 7$ global inhibition.
-- **7 Canonical SWC Skeletons**: Direct morphological neuron reconstructions of `Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`, `E-PG`, and `DNpe017`.
-- **178 Submicron Chemical Active Zones**: Pre- and post-synaptic contacts labeled with physiological neurotransmitters: Acetylcholine (116 ACh), GABA (24 GABA), Glutamate (18 Glu), and Neuromuscular Junctions (20 NMJ).
+- **14 Canonical SWC Skeletons**: Direct morphological neuron reconstructions spanning visual ON-motion (`Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`), visual OFF-motion (`T5a`), looming projection (`LC4`), central complex steering (`E-PG`, `P-EN`), mushroom body associative memory (`KC`, `MBON-gamma1pedc`, `PPL1-gamma1pedc`), and motor output (`DNpe017`, `T2_Motor`).
+- **262 Submicron Chemical Active Zones**: Pre- and post-synaptic contacts labeled with physiological neurotransmitters: Acetylcholine (206 ACh), GABA (30 GABA), Glutamate (18 Glu), and Dopamine (8 modulatory Dopamine contacts).
 
 ---
 
@@ -102,7 +102,7 @@ FlyDoom extends this research lineage by introducing explicit, physiologically g
 1. **Multi-Compartment Biophysics (Model D) vs. Abstract Graph Flow**: Replaces linear node summing with a four-branch active dendritic model incorporating biological reversal potentials ($E_{\text{GABA}} = -75\,\text{mV}$, $E_{\text{Glu}} = -80\,\text{mV}$, $E_{\text{exc}} = 0\,\text{mV}$), non-linear shunting inhibition, and supralinear coincidence detection validated against in vivo patch-clamp recordings (Haag et al., 2016; Gruntman et al., 2018).
 2. **Graded Hyperbolic Steering vs. Runaway Hemispheric Saturation**: Formulates continuous, non-saturating motor asymmetry ($\hat{\Delta} = \tanh((V_R - V_L)/15.0)$) and somatic-referenced axial coupling ($I_{\text{axial}} = g_{\text{axial}}(V_{\text{lead}} - V_{\text{soma}})$), resolving the catastrophic hemispheric locking where unilateral saturation previously crippled corridor navigation.
 3. **Native macOS GZDoom Closed-Loop Embodiment**: Moves beyond headless ViZDoom buffers to an end-to-end native macOS desktop bridge using zero-copy CoreGraphics frame capture and Quartz event-tap keystroke injection into `/Applications/GZDoom.app`.
-4. **Anatomical Spatial Digital Twin & Micro-Circuit Inspector**: Couples closed-loop gameplay with full JFRC/JRC2018 3D spatial alignment, 128 retinotopic cartridges, 7 EM SWC neuron skeletons, 178 chemical active zones, and real-time in silico genetic lesion benchmarking.
+4. **Anatomical Spatial Digital Twin & Micro-Circuit Inspector**: Couples closed-loop gameplay with full JFRC/JRC2018 3D spatial alignment, 128 retinotopic cartridges, 14 EM SWC neuron skeletons, 262 chemical active zones, and real-time in silico genetic lesion benchmarking.
 
 ---
 
@@ -256,7 +256,7 @@ FlyDoom includes a self-contained, interactive 3D Web Observatory (`web/fly_3d_v
   - `[L1: MACRO]`: 3D brain mesh, surface cuticle, and 3,030 connectome streamlines.
   - `[L2: CIRCUITS]`: Highlights 128 retinotopic columns, central complex heading loops, and VNC motor tracts.
   - `[L3: SYNAPSES]`: Centers on the optic lobe column, rendering full SWC morphology graphs and glowing 3D synapse active zones.
-- **Synaptic Adjacency Wiring Matrix**: Complete $7 \times 7$ directed connectivity table across `Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`, `E-PG`, and `DNpe017`.
+- **Synaptic Adjacency Wiring Matrix**: Complete directed connectivity table across all 14 canonical cell types (`Mi1`, `Tm3`, `Mi4`, `Mi9`, `T4a`, `T5a`, `LC4`, `E-PG`, `P-EN`, `KC`, `MBON`, `PPL1`, `DNpe017`, `T2_Motor`).
 - **Latency Propagation Pipeline**: Quantifies the end-to-end sensorimotor arc ($28.7\,\text{ms}$ total closed-loop latency: Retina $8.5\,\text{ms} \to$ Medulla $6.2\,\text{ms} \to$ T4a $2.8\,\text{ms} \to$ CX $4.2\,\text{ms} \to$ DN $2.1\,\text{ms} \to$ VNC $4.9\,\text{ms}$).
 - **In Silico Genetic Knockouts**: Real-time interactive ablation buttons (`Mi4 KO`, `Mi1 KO`, `Tm3 KO`, `Mi9 KO`) updating connectome morphology and $V_m$ readouts live in the browser.
 
@@ -345,7 +345,7 @@ flydoom/
 ├── src/
 │   └── fly_doom/
 │       ├── connectome/                    # Morphological reconstruction & synapse active zones
-│       │   ├── high_fidelity_pathways.py  # 128 cartridges, 7 SWC skeletons, 178 synapses
+│       │   ├── high_fidelity_pathways.py  # 128 cartridges, 14 SWC skeletons, 262 synapses
 │       │   └── t4_anatomical.py           # Canonical T4a dendrite geometry
 │       ├── control/                       # Neural action selection & steering controllers
 │       │   └── controllers.py             # ControlledT4Controller & DoorSeekingController

@@ -60,8 +60,8 @@ def main() -> None:
 
     if args.verify:
         print("Running bundle verification checks...")
-        assert len(bundle_dict["neurons"]) == 7, "Expected 7 canonical neurons"
-        assert len(bundle_dict["synapses"]) >= 170, f"Expected >= 170 synapses, got {len(bundle_dict['synapses'])}"
+        assert len(bundle_dict["neurons"]) == 14, f"Expected 14 canonical neurons, got {len(bundle_dict['neurons'])}"
+        assert len(bundle_dict["synapses"]) >= 250, f"Expected >= 250 synapses, got {len(bundle_dict['synapses'])}"
         assert len(bundle_dict["cartridges"]) == 128, "Expected 128 cartridges (64 per eye)"
         # Check all node parent references
         for n in bundle_dict["neurons"]:

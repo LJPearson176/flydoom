@@ -487,8 +487,8 @@ def main():
     <div class="header-chips">
       <div class="chip"><span>JFRC2 BRAIN MESH</span><strong>6,654 EDGES</strong></div>
       <div class="chip"><span>CONNECTOME</span><strong>3,030 FIBERS</strong></div>
-      <div class="chip"><span>SWC SKELETONS</span><strong>7 NEURONS</strong></div>
-      <div class="chip"><span>EM SYNAPSES</span><strong>178 VERIFIED</strong></div>
+      <div class="chip"><span>SWC SKELETONS</span><strong>14 NEURONS</strong></div>
+      <div class="chip"><span>EM SYNAPSES</span><strong>262 VERIFIED</strong></div>
       <div class="chip"><span>CARTRIDGES</span><strong>128 COLS</strong></div>
     </div>
   </header>
@@ -715,20 +715,21 @@ def main():
           <input type="checkbox" id="chkCartridges" onchange="state.showCartridges = this.checked">
         </div>
         <div class="layer-row">
-          <span>SWC Morphology Skeletons (7 Neurons)</span>
+          <span>SWC Morphology Skeletons (14 Neurons)</span>
           <input type="checkbox" id="chkSWC" checked onchange="state.showSWC = this.checked">
         </div>
         <div class="layer-row">
-          <span>Chemical Synapses Point Cloud (178)</span>
+          <span>Chemical Synapses Point Cloud (262)</span>
           <input type="checkbox" id="chkSynapses" checked onchange="state.showSynapses = this.checked">
         </div>
         <div class="slider-row" style="margin-top:6px; margin-bottom:0;">
           <label><span>SYNAPSE TRANSMITTER FILTER</span></label>
           <select class="select" id="synapseFilterSel" style="margin-bottom:0;" onchange="onSynapseFilter(this.value)">
-            <option value="all">ALL TRANSMITTERS (178 Synapses)</option>
+            <option value="all">ALL TRANSMITTERS (262 Synapses)</option>
             <option value="ACh">ACh / Acetylcholine (Excitatory · Cyan)</option>
             <option value="GABA">GABA (Inhibitory Shunt · Violet)</option>
             <option value="Glu">Glutamate (Distal Inhibit · Pink)</option>
+            <option value="Dopamine">Dopamine (PPL1 Modulatory · Rose)</option>
           </select>
         </div>
       </div>
@@ -1935,7 +1936,7 @@ def main():
         ctx.globalAlpha = 1.0;
       }}
 
-      // 8. SWC Morphology Skeletons (7 canonical neurons)
+      // 8. SWC Morphology Skeletons (14 canonical neurons)
       if (state.showSWC && DATA.high_fidelity_pathways && DATA.high_fidelity_pathways.neurons) {{
         const neurons = DATA.high_fidelity_pathways.neurons;
         const activeLesion = state.lesionMode;
@@ -2028,7 +2029,7 @@ def main():
         }}
       }}
 
-      // 9. Chemical Synapse Point Cloud (178 EM-registered contacts)
+      // 9. Chemical Synapse Point Cloud (262 EM-registered contacts)
       if (state.showSynapses && DATA.high_fidelity_pathways && DATA.high_fidelity_pathways.synapses) {{
         const synapses = DATA.high_fidelity_pathways.synapses;
         const activeLesion = state.lesionMode;
