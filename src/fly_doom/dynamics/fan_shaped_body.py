@@ -361,3 +361,106 @@ class Stage1WaypointGraph:
 
     def reset(self) -> None:
         self.current_idx = 0
+
+
+class Stage2WaypointGraph:
+    """Topological Waypoint Graph for DOOM E1M2: Nuclear Plant (Spawn to Exit)."""
+
+    def __init__(self) -> None:
+        self.waypoints: List[WaypointNode] = [
+            # Zone 1: Spawn Corridor & Entry Foyer
+            WaypointNode(
+                zone_id=1,
+                name="Spawn_Corridor",
+                target_pos=(-32.0, 160.0),
+                radius=120.0,
+                target_heading_deg=90.0,
+                description="Exit initial spawn pad northward through security foyer",
+            ),
+            # Zone 2: Main Nuclear Overlook & Slime Trench
+            WaypointNode(
+                zone_id=2,
+                name="Nuclear_Overlook",
+                target_pos=(0.0, 640.0),
+                radius=140.0,
+                target_heading_deg=90.0,
+                required_action="COMBAT",
+                description="Central chamber overlooking acid canal with Shotgun Guy garrison",
+            ),
+            # Zone 3: West Slime Basin Catwalk
+            WaypointNode(
+                zone_id=3,
+                name="Slime_Basin_Catwalk",
+                target_pos=(-256.0, 1120.0),
+                radius=120.0,
+                target_heading_deg=135.0,
+                description="Navigate perimeter catwalk hugging the toxic radioactive waste basin",
+            ),
+            # Zone 4: Security Red Keycard Airlock / Door 1
+            WaypointNode(
+                zone_id=4,
+                name="Security_Airlock_Door",
+                target_pos=(-512.0, 1536.0),
+                radius=80.0,
+                target_heading_deg=90.0,
+                required_action="USE_DOOR",
+                description="Security airlock door requiring USE actuation to enter reactor core",
+            ),
+            # Zone 5: Reactor Decontamination Core
+            WaypointNode(
+                zone_id=5,
+                name="Reactor_Core_Terminal",
+                target_pos=(128.0, 1920.0),
+                radius=150.0,
+                target_heading_deg=45.0,
+                required_action="COMBAT",
+                description="Decontamination computer terminal hall with hostile Imps",
+            ),
+            # Zone 6: Reactor Elevator Lift
+            WaypointNode(
+                zone_id=6,
+                name="Reactor_Elevator_Lift",
+                target_pos=(896.0, 2304.0),
+                radius=100.0,
+                target_heading_deg=0.0,
+                required_action="USE_DOOR",
+                description="Piston lift gantry ascending to upper exit decontamination chamber",
+            ),
+            # Zone 7: Exit Airlock & Final Switch
+            WaypointNode(
+                zone_id=7,
+                name="Exit_Airlock_Switch",
+                target_pos=(1536.0, 2688.0),
+                radius=90.0,
+                target_heading_deg=90.0,
+                required_action="EXIT_SWITCH",
+                description="Final stage switch triggering STAGE CLEAR for E1M2",
+            ),
+        ]
+        self.current_idx: int = 0
+
+    def get_current_waypoint(self) -> WaypointNode:
+        return self.waypoints[min(self.current_idx, len(self.waypoints) - 1)]
+
+    def update_progress(self, current_pos: Tuple[float, float]) -> WaypointNode:
+        """Update active waypoint index based on Euclidean proximity."""
+        wp = self.get_current_waypoint()
+        dist = math.hypot(
+            current_pos[0] - wp.target_pos[0],
+            current_pos[1] - wp.target_pos[1],
+        )
+        if dist <= wp.radius and self.current_idx < len(self.waypoints) - 1:
+            if wp.required_action in ("USE_DOOR", "EXIT_SWITCH"):
+                head_rad = math.radians(wp.target_heading_deg)
+                dx = current_pos[0] - wp.target_pos[0]
+                dy = current_pos[1] - wp.target_pos[1]
+                progress = dx * math.cos(head_rad) + dy * math.sin(head_rad)
+                if progress <= 20.0:
+                    return wp
+            self.current_idx += 1
+            wp = self.get_current_waypoint()
+        return wp
+
+    def reset(self) -> None:
+        self.current_idx = 0
+

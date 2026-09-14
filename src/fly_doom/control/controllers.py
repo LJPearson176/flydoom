@@ -41,6 +41,7 @@ from fly_doom.dynamics.fan_shaped_body import (
     FanShapedBodyVectorEngine,
     SEZNociceptiveReflex,
     Stage1WaypointGraph,
+    Stage2WaypointGraph,
 )
 from fly_doom.sensory.encoders.delta import EncoderDelta
 
@@ -461,6 +462,7 @@ class DoorSeekingController:
         door_decoder: Optional[Any] = None,
         enemy_decoder: Optional[Any] = None,
         threat_decoder: Optional[Any] = None,
+        waypoint_graph: Optional[Any] = None,
     ):
         self.base = base
         self.name = f"{base.name}_DoorSeeking"
@@ -486,7 +488,7 @@ class DoorSeekingController:
         self.fb_engine = FanShapedBodyVectorEngine()
         self.sez_reflex = SEZNociceptiveReflex()
         self.ammc_reflex = AMMCWallSlipReflex(stall_ticks=self.stall_ticks)
-        self.waypoint_graph = Stage1WaypointGraph()
+        self.waypoint_graph = waypoint_graph or Stage1WaypointGraph()
         self.last_neural_state: Dict[str, float] = {}
         self._platform_snipe_burst: Dict[int, int] = {}
         self._combat_burst: int = 0
@@ -545,6 +547,8 @@ class DoorSeekingController:
         if position is not None and self._last_position is not None:
             displacement = math.hypot(position[0] - self._last_position[0], position[1] - self._last_position[1])
             self._stalled_ticks = self._stalled_ticks + 1 if displacement < 1.0 else 0
+            if displacement > 100.0:
+                self._use_cooldown = 0
         else:
             self._stalled_ticks = 0
 
@@ -581,136 +585,165 @@ class DoorSeekingController:
         curr_y: Optional[float] = None
         if self.manage_perspective and position is not None and angle_deg is not None:
             curr_x, curr_y = position
-            at_door_threshold = 1450.0 <= curr_x <= 1536.0
-            in_enemy_arena = curr_x >= 1664.0
 
-            # Zone 1: In spawn corridor before the hallway turn
-            if curr_x < 1200.0 and curr_y < -3300.0:
-                target_angle = 90.0
-                deadband = 15.0
-            # Zone 2: Hallway turn - moving forward and to the right toward the door alcove
-            elif curr_x < 1450.0:
-                target_angle = math.degrees(math.atan2(self.door_target_y - curr_y, self.door_target_x - curr_x))
-                deadband = 15.0
-            # Zone 3: Door approach - squarely facing East (0.0 deg) at Door Line 151
-            elif curr_x <= 1536.0:
-                target_angle = 0.0
-                deadband = 10.0
-            # Zone 4: Doorway corridor traversal (1536 to 1664) - push straight through
-            elif curr_x < 1664.0:
-                target_angle = 0.0
-                deadband = 10.0
-            # Zone 5: Zigzag Enemy Arena (X >= 1664) - greet and engage living enemy NPCs
-            else:
+            # Stage 2 (E1M2: Nuclear Plant) autonomous detection & guidance
+            if curr_y > -1000.0 or isinstance(self.waypoint_graph, Stage2WaypointGraph):
+                if isinstance(self.waypoint_graph, Stage1WaypointGraph):
+                    self.waypoint_graph = Stage2WaypointGraph()
+                active_wp = self.waypoint_graph.update_progress((curr_x, curr_y))
+                dx = active_wp.target_pos[0] - curr_x
+                dy = active_wp.target_pos[1] - curr_y
+                dist_to_wp = math.hypot(dx, dy)
+                if dist_to_wp > 35.0:
+                    target_angle = math.degrees(math.atan2(dy, dx))
+                else:
+                    target_angle = active_wp.target_heading_deg
+                deadband = 12.0
+
+                if active_wp.required_action in ("USE_DOOR", "EXIT_SWITCH") and dist_to_wp <= active_wp.radius:
+                    at_door_threshold = True
+                if active_wp.required_action == "EXIT_SWITCH":
+                    at_exit_switch = True
+                if active_wp.required_action == "COMBAT":
+                    in_enemy_arena = True
+
                 state_dict = obs.info.get("native_game_state") if obs.info else None
-                tgt_x = state_dict.get("target_x") if isinstance(state_dict, dict) else None
-                tgt_y = state_dict.get("target_y") if isinstance(state_dict, dict) else None
-                tgt_z = state_dict.get("target_z") if isinstance(state_dict, dict) else None
                 tgt_hp = state_dict.get("target_health") if isinstance(state_dict, dict) else None
                 tgt_vis = bool(state_dict.get("target_visible", False)) if isinstance(state_dict, dict) and state_dict.get("target_visible") is not None else False
+                if tgt_vis and tgt_hp is not None and float(tgt_hp) > 0.0:
+                    has_live_target = True
 
-                has_live_target = False
-                tgt_dist = (
-                    math.hypot(float(tgt_x) - curr_x, float(tgt_y) - curr_y)
-                    if tgt_x is not None and tgt_y is not None and curr_x is not None and curr_y is not None
-                    else None
-                )
-                max_engage_dist = (
-                    620.0
-                    if (curr_x is not None and curr_x < 2200.0 and curr_y is not None and curr_y > -2700.0)
-                    else 380.0
-                )
-                on_bridge = curr_y is not None and (-3650.0 < curr_y < -3050.0)
-                is_off_bridge_threat = on_bridge and tgt_z is not None and float(tgt_z) > 50.0
-                if (
-                    tgt_x is not None
-                    and tgt_y is not None
-                    and (tgt_hp is None or tgt_hp > 0)
-                    and tgt_vis
-                    and not is_off_bridge_threat
-                    and (tgt_dist is None or tgt_dist <= max_engage_dist)
-                ):
-                    target_enemy = (float(tgt_x), float(tgt_y))
-                    enemy_target_id = 100
-                    has_live_target = True
-                elif obs.kill_count < 1 and curr_x < 1820.0:
-                    target_enemy = self.enemy1_pos
-                    enemy_target_id = 1
-                    has_live_target = True
-                elif obs.kill_count < 2 and curr_x < 1820.0:
-                    target_enemy = self.enemy2_pos
-                    enemy_target_id = 2
-                    has_live_target = True
-                elif obs.kill_count < 3 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
-                    cnt = self._platform_snipe_burst.get(3, 0)
-                    if cnt < 2 and obs.ammo > 10:
-                        target_enemy = (2272.0, -2512.0)
-                        enemy_target_id = 3
-                        has_live_target = True
-                        self._platform_snipe_burst[3] = cnt + 1
-                    else:
-                        target_enemy = (2100.0, -2672.0)
-                        enemy_target_id = 200
-                elif obs.kill_count < 4 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
-                    cnt = self._platform_snipe_burst.get(4, 0)
-                    if cnt < 2 and obs.ammo > 10:
-                        target_enemy = (2272.0, -2432.0)
-                        enemy_target_id = 4
-                        has_live_target = True
-                        self._platform_snipe_burst[4] = cnt + 1
-                    else:
-                        target_enemy = (2100.0, -2672.0)
-                        enemy_target_id = 200
-                elif obs.kill_count < 5 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
-                    cnt = self._platform_snipe_burst.get(5, 0)
-                    if cnt < 2 and obs.ammo > 10:
-                        target_enemy = (2272.0, -2352.0)
-                        enemy_target_id = 5
-                        has_live_target = True
-                        self._platform_snipe_burst[5] = cnt + 1
-                    else:
-                        target_enemy = (2100.0, -2672.0)
-                        enemy_target_id = 200
-                elif curr_x < 1820.0:
-                    target_enemy = (1850.0, -2496.0)
-                    enemy_target_id = 150
-                elif curr_x < 2100.0:
-                    target_enemy = (2100.0, -2672.0)
-                    enemy_target_id = 200
-                elif curr_x < 2480.0:
-                    target_enemy = (2496.0, -2624.0)
-                    enemy_target_id = 250
-                elif curr_x < 2650.0:
-                    target_enemy = (2800.0, -2800.0)
-                    enemy_target_id = 300
-                elif curr_y > -3650.0:
-                    enemy_target_id = 400
-                    if curr_x < 2800.0:
-                        target_enemy = (3100.0, -3600.0)
-                    elif curr_y > -3000.0:
-                        target_enemy = (3000.0, -3050.0)
-                    elif curr_y > -3180.0 and curr_x > 2920.0:
-                        target_enemy = (2900.0, -3200.0)
-                    elif curr_x < 3080.0 and curr_y > -3310.0:
-                        target_enemy = (3100.0, -3320.0)
-                    elif curr_y > -3530.0:
-                        target_enemy = (3024.0, -3544.0)
-                    else:
-                        target_enemy = (3008.0, -3650.0)
-                elif curr_y > -4030.0:
-                    target_enemy = (3008.0, -4000.0)
-                    enemy_target_id = 500
-                elif curr_y > -4640.0:
-                    target_enemy = (3008.0, -4630.0)
-                    enemy_target_id = 600
+            else:
+                at_door_threshold = 1450.0 <= curr_x <= 1536.0
+                in_enemy_arena = curr_x >= 1664.0
+
+                # Zone 1: In spawn corridor before the hallway turn
+                if curr_x < 1200.0 and curr_y < -3300.0:
+                    target_angle = 90.0
+                    deadband = 15.0
+                # Zone 2: Hallway turn - moving forward and to the right toward the door alcove
+                elif curr_x < 1450.0:
+                    target_angle = math.degrees(math.atan2(self.door_target_y - curr_y, self.door_target_x - curr_x))
+                    deadband = 15.0
+                # Zone 3: Door approach - squarely facing East (0.0 deg) at Door Line 151
+                elif curr_x <= 1536.0:
+                    target_angle = 0.0
+                    deadband = 10.0
+                # Zone 4: Doorway corridor traversal (1536 to 1664) - push straight through
+                elif curr_x < 1664.0:
+                    target_angle = 0.0
+                    deadband = 10.0
+                # Zone 5: Zigzag Enemy Arena (X >= 1664) - greet and engage living enemy NPCs
                 else:
-                    target_enemy = (2912.0, -4768.0)
-                    enemy_target_id = 700
+                    state_dict = obs.info.get("native_game_state") if obs.info else None
+                    tgt_x = state_dict.get("target_x") if isinstance(state_dict, dict) else None
+                    tgt_y = state_dict.get("target_y") if isinstance(state_dict, dict) else None
+                    tgt_z = state_dict.get("target_z") if isinstance(state_dict, dict) else None
+                    tgt_hp = state_dict.get("target_health") if isinstance(state_dict, dict) else None
+                    tgt_vis = bool(state_dict.get("target_visible", False)) if isinstance(state_dict, dict) and state_dict.get("target_visible") is not None else False
 
-                dx = target_enemy[0] - curr_x
-                dy = target_enemy[1] - curr_y
-                target_angle = math.degrees(math.atan2(dy, dx))
-                deadband = 12.0
+                    has_live_target = False
+                    tgt_dist = (
+                        math.hypot(float(tgt_x) - curr_x, float(tgt_y) - curr_y)
+                        if tgt_x is not None and tgt_y is not None and curr_x is not None and curr_y is not None
+                        else None
+                    )
+                    max_engage_dist = (
+                        620.0
+                        if (curr_x is not None and curr_x < 2200.0 and curr_y is not None and curr_y > -2700.0)
+                        else 380.0
+                    )
+                    on_bridge = curr_y is not None and (-3650.0 < curr_y < -3050.0)
+                    is_off_bridge_threat = on_bridge and tgt_z is not None and float(tgt_z) > 50.0
+                    if (
+                        tgt_x is not None
+                        and tgt_y is not None
+                        and (tgt_hp is None or tgt_hp > 0)
+                        and tgt_vis
+                        and not is_off_bridge_threat
+                        and (tgt_dist is None or tgt_dist <= max_engage_dist)
+                    ):
+                        target_enemy = (float(tgt_x), float(tgt_y))
+                        enemy_target_id = 100
+                        has_live_target = True
+                    elif obs.kill_count < 1 and curr_x < 1820.0:
+                        target_enemy = self.enemy1_pos
+                        enemy_target_id = 1
+                        has_live_target = True
+                    elif obs.kill_count < 2 and curr_x < 1820.0:
+                        target_enemy = self.enemy2_pos
+                        enemy_target_id = 2
+                        has_live_target = True
+                    elif obs.kill_count < 3 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                        cnt = self._platform_snipe_burst.get(3, 0)
+                        if cnt < 2 and obs.ammo > 10:
+                            target_enemy = (2272.0, -2512.0)
+                            enemy_target_id = 3
+                            has_live_target = True
+                            self._platform_snipe_burst[3] = cnt + 1
+                        else:
+                            target_enemy = (2100.0, -2672.0)
+                            enemy_target_id = 200
+                    elif obs.kill_count < 4 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                        cnt = self._platform_snipe_burst.get(4, 0)
+                        if cnt < 2 and obs.ammo > 10:
+                            target_enemy = (2272.0, -2432.0)
+                            enemy_target_id = 4
+                            has_live_target = True
+                            self._platform_snipe_burst[4] = cnt + 1
+                        else:
+                            target_enemy = (2100.0, -2672.0)
+                            enemy_target_id = 200
+                    elif obs.kill_count < 5 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                        cnt = self._platform_snipe_burst.get(5, 0)
+                        if cnt < 2 and obs.ammo > 10:
+                            target_enemy = (2272.0, -2352.0)
+                            enemy_target_id = 5
+                            has_live_target = True
+                            self._platform_snipe_burst[5] = cnt + 1
+                        else:
+                            target_enemy = (2100.0, -2672.0)
+                            enemy_target_id = 200
+                    elif curr_x < 1820.0:
+                        target_enemy = (1850.0, -2496.0)
+                        enemy_target_id = 150
+                    elif curr_x < 2100.0:
+                        target_enemy = (2100.0, -2672.0)
+                        enemy_target_id = 200
+                    elif curr_x < 2480.0:
+                        target_enemy = (2496.0, -2624.0)
+                        enemy_target_id = 250
+                    elif curr_x < 2650.0:
+                        target_enemy = (2800.0, -2800.0)
+                        enemy_target_id = 300
+                    elif curr_y > -3650.0:
+                        enemy_target_id = 400
+                        if curr_x < 2800.0:
+                            target_enemy = (3100.0, -3600.0)
+                        elif curr_y > -3000.0:
+                            target_enemy = (3000.0, -3050.0)
+                        elif curr_y > -3180.0 and curr_x > 2920.0:
+                            target_enemy = (2900.0, -3200.0)
+                        elif curr_x < 3080.0 and curr_y > -3310.0:
+                            target_enemy = (3100.0, -3320.0)
+                        elif curr_y > -3530.0:
+                            target_enemy = (3024.0, -3544.0)
+                        else:
+                            target_enemy = (3008.0, -3650.0)
+                    elif curr_y > -4030.0:
+                        target_enemy = (3008.0, -4000.0)
+                        enemy_target_id = 500
+                    elif curr_y > -4640.0:
+                        target_enemy = (3008.0, -4630.0)
+                        enemy_target_id = 600
+                    else:
+                        target_enemy = (2912.0, -4768.0)
+                        enemy_target_id = 700
+
+                    dx = target_enemy[0] - curr_x
+                    dy = target_enemy[1] - curr_y
+                    target_angle = math.degrees(math.atan2(dy, dx))
+                    deadband = 12.0
 
             if enemy_target_id != self._last_enemy_target_id:
                 self._combat_burst = 0
@@ -795,7 +828,7 @@ class DoorSeekingController:
         if (
             self._stalled_ticks >= self.stall_ticks
             and candidate
-            and (curr_x is None or curr_x < 1550.0)
+            and (curr_x is None or curr_x < 1550.0 or isinstance(self.waypoint_graph, Stage2WaypointGraph))
         ):
             if perspective_action is not None:
                 action = perspective_action

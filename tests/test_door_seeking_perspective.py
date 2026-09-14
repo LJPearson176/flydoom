@@ -327,4 +327,52 @@ def test_zone5_platform_sniping_targets():
     assert state_k4["target_angle_deg"] == pytest.approx(18.84, abs=0.5)
 
 
+def test_stage2_e1m2_automatic_transition():
+    """Verify that moving into E1M2 coordinates automatically activates Stage2WaypointGraph."""
+    from fly_doom.dynamics.fan_shaped_body import Stage1WaypointGraph, Stage2WaypointGraph
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+    assert isinstance(controller.waypoint_graph, Stage1WaypointGraph)
 
+    # Observe position at E1M2 spawn: (-32.0, -240.0)
+    obs_e1m2 = _make_obs(x=-32.0, y=-240.0, angle_deg=90.0)
+    act = controller.select_action(obs_e1m2)
+    assert isinstance(controller.waypoint_graph, Stage2WaypointGraph)
+    assert act == DoomAction.FORWARD
+
+
+def test_stage2_e1m2_spawn_navigation():
+    """Verify correct navigation and turning from E1M2 spawn pad."""
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+
+    # Spawn pad: (-32, -240), facing 0 deg (East), target is (-32, 160) which is 90 deg (North)
+    obs_east = _make_obs(x=-32.0, y=-240.0, angle_deg=0.0)
+    act = controller.select_action(obs_east)
+    # diff = 90 - 0 = +90 > deadband (12) -> TURN_LEFT
+    assert act == DoomAction.TURN_LEFT
+    assert controller.get_neural_state()["target_angle_deg"] == pytest.approx(90.0)
+
+
+def test_stage2_e1m2_airlock_door_and_exit_switch():
+    """Verify that E1M2 security doors and exit switches trigger USE actuation."""
+    from fly_doom.dynamics.fan_shaped_body import Stage2WaypointGraph
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    sg2 = Stage2WaypointGraph()
+    # Fast forward to Zone 4 (Security Airlock Door at -512, 1536)
+    sg2.current_idx = 3
+    controller = DoorSeekingController(base, waypoint_graph=sg2, stall_ticks=2, manage_perspective=True)
+
+    obs_door = _make_obs(x=-512.0, y=1520.0, angle_deg=90.0)
+    controller.select_action(obs_door)
+    controller.select_action(obs_door)
+    act_door = controller.select_action(obs_door)
+    assert act_door == DoomAction.USE
+
+    # Fast forward to Zone 7 (Exit Airlock Switch at 1536, 2688)
+    sg2.current_idx = 6
+    obs_exit = _make_obs(x=1536.0, y=2680.0, angle_deg=90.0)
+    controller.select_action(obs_exit)
+    controller.select_action(obs_exit)
+    act_exit = controller.select_action(obs_exit)
+    assert act_exit == DoomAction.USE
