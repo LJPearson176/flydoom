@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from scipy.special import expit, softmax
 
@@ -285,3 +285,41 @@ class VisceralThreatDecoder:
         self.std = data["std"]
         self.firing_threshold = float(data["firing_threshold"])
         return self
+
+
+def load_trained_decoders(
+    assets_dir: Optional[Union[str, Path]] = None,
+) -> Tuple[Optional[DoorThresholdDecoder], Optional[EnemyCategorizationDecoder], Optional[VisceralThreatDecoder]]:
+    """Load pre-trained connectome reservoir decoders from disk.
+
+    Args:
+        assets_dir: Path to directory containing saved .npz decoders.
+                    Defaults to repo assets/reservoir_decoders/.
+
+    Returns:
+        Tuple of (door_decoder, enemy_decoder, threat_decoder), where any
+        missing decoder is returned as None.
+    """
+    if assets_dir is None:
+        repo_root = Path(__file__).resolve().parents[3]
+        assets_dir = repo_root / "assets" / "reservoir_decoders"
+    else:
+        assets_dir = Path(assets_dir)
+
+    door_dec: Optional[DoorThresholdDecoder] = None
+    enemy_dec: Optional[EnemyCategorizationDecoder] = None
+    threat_dec: Optional[VisceralThreatDecoder] = None
+
+    door_path = assets_dir / "door_decoder.npz"
+    if door_path.exists():
+        door_dec = DoorThresholdDecoder().load(door_path)
+
+    enemy_path = assets_dir / "enemy_decoder.npz"
+    if enemy_path.exists():
+        enemy_dec = EnemyCategorizationDecoder().load(enemy_path)
+
+    threat_path = assets_dir / "threat_decoder.npz"
+    if threat_path.exists():
+        threat_dec = VisceralThreatDecoder().load(threat_path)
+
+    return door_dec, enemy_dec, threat_dec

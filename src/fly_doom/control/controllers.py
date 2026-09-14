@@ -492,6 +492,26 @@ class DoorSeekingController:
         self._combat_burst: int = 0
         self._last_enemy_target_id: int = 0
 
+    @classmethod
+    def create_with_reservoir(
+        cls,
+        base: Any,
+        assets_dir: Optional[Union[str, Path]] = None,
+        **kwargs: Any,
+    ) -> DoorSeekingController:
+        """Factory creating DoorSeekingController equipped with ConnectomeReservoir and decoders."""
+        from fly_doom.reservoir import ConnectomeReservoir, load_trained_decoders
+        door_dec, enemy_dec, threat_dec = load_trained_decoders(assets_dir)
+        reservoir = ConnectomeReservoir()
+        return cls(
+            base=base,
+            reservoir=reservoir,
+            door_decoder=door_dec,
+            enemy_decoder=enemy_dec,
+            threat_decoder=threat_dec,
+            **kwargs,
+        )
+
     @staticmethod
     def _position_and_angle(obs: DoomObservation) -> Tuple[Optional[Tuple[float, float]], Optional[float]]:
         state = obs.info.get("native_game_state") if obs.info else None
@@ -702,9 +722,11 @@ class DoorSeekingController:
             elif diff < -deadband:
                 perspective_action = DoomAction.TURN_RIGHT
 
-            # In enemy arena, lock firing solution only if a living visible target exists
+            # In enemy arena, lock firing solution if a living visible target exists
+            # or if the connectome visceral threat decoder confirms a looming hostile
             if in_enemy_arena:
-                if has_live_target and abs(diff) <= 18.0 and obs.ammo > 0:
+                res_should_fire = (reservoir_state.get("reservoir_should_fire", 0.0) == 1.0)
+                if (has_live_target or res_should_fire) and abs(diff) <= 18.0 and obs.ammo > 0:
                     combat_action = DoomAction.FIRE
 
                 # Health has priority over damage output. A fresh health drop
@@ -737,7 +759,8 @@ class DoorSeekingController:
             threat_action = DoomAction.TURN_LEFT if acid_bias > 0 else DoomAction.TURN_RIGHT
 
         base_action = self.base.select_action(obs)
-        candidate = self._door_candidate(obs) or at_door_threshold
+        res_door = (reservoir_state.get("reservoir_door_use", 0.0) == 1.0)
+        candidate = self._door_candidate(obs) or at_door_threshold or res_door
 
         # Decrement use cooldown independently so perspective control is never blocked
         if self._use_cooldown > 0:

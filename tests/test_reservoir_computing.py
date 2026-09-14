@@ -15,6 +15,7 @@ from fly_doom.reservoir.decoders import (
     DoorThresholdDecoder,
     EnemyCategorizationDecoder,
     VisceralThreatDecoder,
+    load_trained_decoders,
 )
 from fly_doom.reservoir.pipeline import ReservoirReadoutPipeline
 from fly_doom.reservoir.reservoir import (
@@ -174,3 +175,38 @@ def test_door_seeking_controller_reservoir_integration():
     assert 0.0 <= state["reservoir_door_prob"] <= 1.0
     assert state["reservoir_enemy_class"] in {0.0, 1.0, 2.0, 3.0}
     assert 0.0 <= state["reservoir_threat_arousal"] <= 1.0
+
+
+def test_load_trained_decoders_and_factory():
+    """Verify loading pre-trained decoders from disk and factory initialization."""
+    door_dec, enemy_dec, threat_dec = load_trained_decoders()
+    assert door_dec is not None
+    assert enemy_dec is not None
+    assert threat_dec is not None
+
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController.create_with_reservoir(base)
+
+    assert controller.reservoir is not None
+    assert controller.door_decoder is not None
+    assert controller.enemy_decoder is not None
+    assert controller.threat_decoder is not None
+
+    # Verify select_action on observation
+    frame = np.full((64, 64, 3), 120, dtype=np.uint8)
+    obs = DoomObservation(
+        rgb=frame,
+        depth=np.zeros((64, 64), dtype=np.float32),
+        health=100.0,
+        ammo=50,
+        kill_count=0,
+        x=1056.0,
+        y=-3616.0,
+        angle_rad=0.0,
+    )
+    action = controller.select_action(obs)
+    assert action is not None
+    st = controller.get_neural_state()
+    assert "reservoir_door_prob" in st
+    assert "reservoir_enemy_class" in st
+    assert "reservoir_threat_arousal" in st

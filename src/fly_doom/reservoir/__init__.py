@@ -17,6 +17,7 @@ from fly_doom.reservoir.decoders import (
     EnemyPrediction,
     DoorPrediction,
     ThreatPrediction,
+    load_trained_decoders,
 )
 from fly_doom.reservoir.datasets import (
     generate_enemy_stimulus_dataset,
@@ -39,6 +40,7 @@ __all__ = [
     "EnemyPrediction",
     "DoorPrediction",
     "ThreatPrediction",
+    "load_trained_decoders",
     "generate_enemy_stimulus_dataset",
     "generate_door_stimulus_dataset",
     "generate_threat_stimulus_dataset",

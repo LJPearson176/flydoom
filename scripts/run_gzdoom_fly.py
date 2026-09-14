@@ -34,6 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--frames", type=int, default=600)
     parser.add_argument("--refractory-ticks", type=int, default=3, help="post-saccadic suppression ticks to prevent spin loops")
     parser.add_argument("--no-door-seeking", action="store_false", dest="door_seeking", default=True, help="disable Stage 1 navigation wrapper")
+    parser.add_argument("--reservoir", action="store_true", default=False, help="enable Connectome-Constrained Reservoir decoders")
     return parser.parse_args()
 
 
@@ -59,7 +60,14 @@ def main() -> None:
     )
     bridge = MacOSGZDoomBridge(target=target, resolution=(64, 64))
     base = ControlledT4Controller(width=64, height=64, saccade_refractory_ticks=args.refractory_ticks)
-    controller = DoorSeekingController(base) if args.door_seeking else base
+    if args.door_seeking:
+        if args.reservoir:
+            print("Equipping DoorSeekingController with Connectome-Constrained Reservoir decoders...")
+            controller = DoorSeekingController.create_with_reservoir(base)
+        else:
+            controller = DoorSeekingController(base)
+    else:
+        controller = base
 
     try:
         window = bridge.launch() if args.launch else bridge.attach(pid=args.attach_pid)
@@ -74,11 +82,14 @@ def main() -> None:
                 fb_t = state.get("fb_steer_torque", 0.0)
                 sez_h = state.get("sez_acid_detected", 0.0)
                 exit_sw = state.get("at_exit_switch", 0.0)
+                res_d = state.get("reservoir_door_use", 0.0)
+                res_f = state.get("reservoir_should_fire", 0.0)
+                res_str = f"res=[D:{int(res_d)} F:{int(res_f)}]" if args.reservoir else ""
                 native_state = obs.info.get("native_game_state", {}) if obs.info else {}
                 pos_str = f"pos=({native_state.get('x', 0.0):.0f},{native_state.get('y', 0.0):.0f})" if native_state else ""
                 print(
                     f"frame={frame:04d} action={action.name:10s} {pos_str:18s} kills={obs.kill_count} HP={obs.health:3.0f}% "
-                    f"tgt_ang={tgt_deg:+6.1f}° fb_t={fb_t:+.2f} sez={'ACID' if sez_h > 0 else 'SAFE'} "
+                    f"tgt_ang={tgt_deg:+6.1f}° fb_t={fb_t:+.2f} sez={'ACID' if sez_h > 0 else 'SAFE'} {res_str} "
                     f"{'EXIT_SWITCH!' if exit_sw > 0 else ''}"
                 )
             if done:
