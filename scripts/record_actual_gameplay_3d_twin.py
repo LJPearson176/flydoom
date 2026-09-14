@@ -258,7 +258,7 @@ def render_3d_nervous_system(
 
 
 def run_actual_gameplay_recording(
-    steps: int = 220,
+    steps: int = 380,
     output_mp4: Path = Path("runs/doom004_actual_gameplay_3d_twin.mp4"),
     output_gif: Path = Path("runs/doom004_actual_gameplay_3d_twin.gif"),
     fps: int = 12,
@@ -413,7 +413,7 @@ def run_actual_gameplay_recording(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Record ACTUAL native GZDoom gameplay and 3D twin")
-    parser.add_argument("--steps", type=int, default=220)
+    parser.add_argument("--steps", type=int, default=380)
     parser.add_argument("--output-mp4", type=Path, default=Path("runs/doom004_actual_gameplay_3d_twin.mp4"))
     parser.add_argument("--output-gif", type=Path, default=Path("runs/doom004_actual_gameplay_3d_twin.gif"))
     parser.add_argument("--fps", type=int, default=12)

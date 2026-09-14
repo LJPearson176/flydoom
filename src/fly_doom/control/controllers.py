@@ -570,15 +570,27 @@ class DoorSeekingController:
                     target_enemy = self.enemy2_pos
                     enemy_target_id = 2
                     has_live_target = True
-                elif curr_x < 2200.0:
-                    target_enemy = (2272.0, -2432.0)
+                elif curr_x < 2100.0:
+                    target_enemy = (2100.0, -2672.0)
                     enemy_target_id = 200
+                elif curr_x < 2480.0:
+                    target_enemy = (2496.0, -2624.0)
+                    enemy_target_id = 250
                 elif curr_x < 2650.0:
                     target_enemy = (2800.0, -2800.0)
                     enemy_target_id = 300
-                else:
+                elif curr_y > -3550.0:
                     target_enemy = (3100.0, -3600.0)
                     enemy_target_id = 400
+                elif curr_y > -4030.0:
+                    target_enemy = (3008.0, -4000.0)
+                    enemy_target_id = 500
+                elif curr_y > -4640.0:
+                    target_enemy = (3008.0, -4630.0)
+                    enemy_target_id = 600
+                else:
+                    target_enemy = (2912.0, -4768.0)
+                    enemy_target_id = 700
 
                 dx = target_enemy[0] - curr_x
                 dy = target_enemy[1] - curr_y
@@ -597,10 +609,9 @@ class DoorSeekingController:
                     combat_action = DoomAction.FIRE
 
                 # Health has priority over damage output. A fresh health drop
-                # or low health enters a short evasion window and suppresses
-                # FIRE until the fly has changed its perspective/position.
+                # enters a short evasion window and suppresses FIRE for a few ticks.
                 health_drop = health_delta < -0.1
-                if (health_drop or obs.health <= self.panic_health) and self._threat_ticks == 0:
+                if health_drop and self._threat_ticks == 0:
                     self._threat_ticks = self.threat_refractory_ticks
                 if self._threat_ticks > 0:
                     evade_angle = (target_angle + 180.0) % 360.0
@@ -643,11 +654,25 @@ class DoorSeekingController:
 
         action = base_action
 
+        at_door_340 = (
+            curr_x is not None
+            and curr_y is not None
+            and 2900.0 <= curr_x <= 3150.0
+            and -4050.0 <= curr_y <= -3920.0
+        )
+        at_exit_door = (
+            curr_x is not None
+            and curr_y is not None
+            and 2900.0 <= curr_x <= 3150.0
+            and -4660.0 <= curr_y <= -4560.0
+        )
         at_exit_switch = (
             curr_x is not None
             and curr_y is not None
-            and curr_x >= 2950.0
-            and curr_y <= -3450.0
+            and (
+                (curr_x >= 2950.0 and -3650.0 <= curr_y <= -3450.0)
+                or (curr_x <= 2960.0 and curr_y <= -4650.0)
+            )
         )
 
         # Door interaction takes priority when stalled in front of the door
@@ -663,7 +688,11 @@ class DoorSeekingController:
                 self._use_cooldown = self.use_cooldown_ticks
                 self._stalled_ticks = 0
         elif in_enemy_arena:
-            if at_exit_switch and (self._stalled_ticks >= 2 or abs(curr_y - (-3600.0)) < 80.0) and self._use_cooldown == 0:
+            if (at_door_340 or at_exit_door) and (self._stalled_ticks >= 2 or candidate) and self._use_cooldown == 0:
+                action = DoomAction.USE
+                self._use_cooldown = self.use_cooldown_ticks
+                self._stalled_ticks = 0
+            elif at_exit_switch and (self._stalled_ticks >= 2 or curr_y <= -4650.0) and self._use_cooldown == 0:
                 action = DoomAction.USE
                 self._use_cooldown = self.use_cooldown_ticks
                 self._stalled_ticks = 0

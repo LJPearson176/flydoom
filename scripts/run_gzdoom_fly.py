@@ -74,8 +74,10 @@ def main() -> None:
                 fb_t = state.get("fb_steer_torque", 0.0)
                 sez_h = state.get("sez_acid_detected", 0.0)
                 exit_sw = state.get("at_exit_switch", 0.0)
+                native_state = obs.info.get("native_game_state", {}) if obs.info else {}
+                pos_str = f"pos=({native_state.get('x', 0.0):.0f},{native_state.get('y', 0.0):.0f})" if native_state else ""
                 print(
-                    f"frame={frame:04d} action={action.name:10s} kills={obs.kill_count} HP={obs.health:3.0f}% "
+                    f"frame={frame:04d} action={action.name:10s} {pos_str:18s} kills={obs.kill_count} HP={obs.health:3.0f}% "
                     f"tgt_ang={tgt_deg:+6.1f}° fb_t={fb_t:+.2f} sez={'ACID' if sez_h > 0 else 'SAFE'} "
                     f"{'EXIT_SWITCH!' if exit_sw > 0 else ''}"
                 )

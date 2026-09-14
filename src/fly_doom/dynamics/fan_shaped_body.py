@@ -297,11 +297,11 @@ class Stage1WaypointGraph:
             # Zone 5: Zigzag Midpoint to Column Hall
             WaypointNode(
                 zone_id=5,
-                name="Zigzag_Walkway_Apex",
-                target_pos=(2272.0, -2432.0),
+                name="Zigzag_Walkway_Passage",
+                target_pos=(2200.0, -2600.0),
                 radius=140.0,
-                target_heading_deg=35.0,
-                description="Cross apex of acid walkway and approach staircase pillars",
+                target_heading_deg=-15.0,
+                description="Cross acid walkway south of raised platform towards staircase pillars",
             ),
             # Zone 6: Pillar Staircase to Upper Computer Hall
             WaypointNode(
@@ -317,11 +317,11 @@ class Stage1WaypointGraph:
             WaypointNode(
                 zone_id=7,
                 name="Exit_Chamber_Switch",
-                target_pos=(3100.0, -3600.0),
+                target_pos=(2912.0, -4768.0),
                 radius=100.0,
-                target_heading_deg=-90.0,
+                target_heading_deg=180.0,
                 required_action="EXIT_SWITCH",
-                description="Final chamber linedef switch triggering STAGE CLEAR",
+                description="Final chamber linedef switch (Line 330) triggering STAGE CLEAR",
             ),
         ]
         self.current_idx: int = 0

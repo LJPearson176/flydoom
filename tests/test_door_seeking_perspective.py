@@ -217,11 +217,11 @@ def test_fb_and_sez_biological_telemetry():
 def test_zone6_staircase_navigation_after_kills():
     base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
     controller = DoorSeekingController(base, manage_perspective=True)
-    obs = _make_obs(x=2400.0, y=-2600.0, angle_deg=0.0, kill_count=2)
+    obs = _make_obs(x=2500.0, y=-2650.0, angle_deg=0.0, kill_count=2)
     controller.select_action(obs)
     state = controller.get_neural_state()
     assert state["enemy_target_id"] == 300.0  # Zone 6: Staircase
-    # dx = 2800 - 2400 = 400, dy = -2800 - (-2600) = -200 -> atan2(-200, 400) ~ -26.56 deg
+    # dx = 2800 - 2500 = 300, dy = -2800 - (-2650) = -150 -> atan2(-150, 300) ~ -26.56 deg
     assert state["target_angle_deg"] == pytest.approx(-26.56, abs=1.0)
 
 
@@ -239,9 +239,61 @@ def test_zone7_exit_chamber_switch_navigation():
 def test_zone7_exit_switch_actuation():
     base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
     controller = DoorSeekingController(base, stall_ticks=2, manage_perspective=True)
-    # Positioned squarely in front of exit switch linedef
+    # Positioned squarely in front of exit switch linedef (legacy position)
     obs = _make_obs(x=3050.0, y=-3580.0, angle_deg=-90.0, kill_count=2)
+    controller.select_action(obs)
+    controller.select_action(obs)
     action = controller.select_action(obs)
     assert action == DoomAction.USE
     state = controller.get_neural_state()
     assert state["at_exit_switch"] == 1.0
+
+
+def test_computer_room_door_340_approach_and_actuation():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, stall_ticks=2, manage_perspective=True)
+    # Approaching Door 340 at (3008, -3800), target is (3008, -4000)
+    obs = _make_obs(x=3008.0, y=-3800.0, angle_deg=-90.0, kill_count=2)
+    controller.select_action(obs)
+    state = controller.get_neural_state()
+    assert state["enemy_target_id"] == 500.0
+    assert state["target_angle_deg"] == pytest.approx(-90.0, abs=1.0)
+
+    # Stalled in front of Door 340 at (3008, -3980)
+    obs_door = _make_obs(x=3008.0, y=-3980.0, angle_deg=-90.0, kill_count=2)
+    controller.select_action(obs_door)
+    controller.select_action(obs_door)
+    act = controller.select_action(obs_door)
+    assert act == DoomAction.USE
+
+
+def test_exit_door_324_actuation():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, stall_ticks=2, manage_perspective=True)
+    # Inside computer room approaching Exit Door 324 at (3008, -4630)
+    obs_comp = _make_obs(x=3008.0, y=-4400.0, angle_deg=-90.0, kill_count=2)
+    controller.select_action(obs_comp)
+    assert controller.get_neural_state()["enemy_target_id"] == 600.0
+
+    # Stalled in front of Exit Door 324 at (3008, -4610)
+    obs_door = _make_obs(x=3008.0, y=-4610.0, angle_deg=-90.0, kill_count=2)
+    controller.select_action(obs_door)
+    controller.select_action(obs_door)
+    assert controller.select_action(obs_door) == DoomAction.USE
+
+
+def test_authentic_switch_line_330():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, stall_ticks=2, manage_perspective=True)
+    # Inside Exit Chamber at (3008, -4768), targets West wall switch (2912, -4768)
+    obs_exit_room = _make_obs(x=3008.0, y=-4768.0, angle_deg=-180.0, kill_count=2)
+    controller.select_action(obs_exit_room)
+    assert controller.get_neural_state()["enemy_target_id"] == 700.0
+    assert controller.get_neural_state()["target_angle_deg"] == pytest.approx(180.0, abs=1.0)
+
+    # In front of Line 330 West wall switch (x=2930, y=-4768)
+    obs_switch = _make_obs(x=2930.0, y=-4768.0, angle_deg=180.0, kill_count=2)
+    assert controller.select_action(obs_switch) == DoomAction.USE
+    assert controller.get_neural_state()["at_exit_switch"] == 1.0
+
+

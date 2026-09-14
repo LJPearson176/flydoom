@@ -1,6 +1,6 @@
 # FlyDoom: Neuromorphic *Drosophila* Connectome Twin Playing DOOM (1993)
 
-[![CI Tests](https://img.shields.io/badge/tests-107%20passed-brightgreen.svg)](tests/)
+[![CI Tests](https://img.shields.io/badge/tests-110%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Connectome](https://img.shields.io/badge/connectome-Janelia%20MaleCNS%20%7C%20FlyWire-purple.svg)](https://flywire.ai/)
 [![DOOM Engine](https://img.shields.io/badge/engine-GZDoom%20Native%20%7C%20E1M1-red.svg)](https://zdoom.org/)
@@ -302,15 +302,15 @@ uv sync
 
 ```bash
 uv run pytest
-# 107 passed in 1.7s
+# 110 passed in 1.8s
 ```
 
 ### 3. Record Live Gameplay with 3D Nervous System Twin
 
 ```bash
-PYTHONPATH=src uv run python scripts/record_actual_gameplay_3d_twin.py --steps 180
+PYTHONPATH=src uv run python scripts/record_actual_gameplay_3d_twin.py --steps 380
 ```
-This launches GZDoom, navigates the E1M1 corridor, opens Door 151, defeats the zombies, and encodes a synchronized composite video:
+This launches GZDoom, navigates the E1M1 corridor, opens Door 151, defeats the zombies, traverses the open catwalk passage, ascends the computer hall stairs, opens Door 340, and activates the exit switch, encoding a synchronized composite video:
 - `runs/doom004_actual_gameplay_3d_twin.mp4`
 - `runs/doom004_actual_gameplay_3d_twin.gif`
 
@@ -363,7 +363,7 @@ flydoom/
 │       │   └── optic_flow.py              # 128-cartridge retinotopic array & 2D flow decomposition
 │       └── sensory/                       # Ommatidial visual encoders
 │           └── encoders/delta.py          # Hexagonal lattice & temporal differencing
-├── tests/                                 # 107 unit & integration tests
+├── tests/                                 # 110 unit & integration tests
 ├── web/                                   # Web Observatory & visualization application
 │   ├── app.js                             # Live hologram canvas renderer & telemetry UI
 │   ├── fly_3d_visible_nervous_system.html # Standalone 3D Connectome Observatory
