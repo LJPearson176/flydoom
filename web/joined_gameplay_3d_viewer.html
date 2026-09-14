@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DoomFly // Live Gameplay & 3D Isometric Drosophila Nervous System</title>
+  <title>DoomFly // 4-Perspective Isomorphism & 3D Embodied Fly with Shotgun</title>
   <style>
     :root {
       --bg: #050a0e;
@@ -53,7 +53,7 @@
       font-weight: 700;
       letter-spacing: 0.08em;
     }
-    .badge-live {
+    .badge-quad {
       background: rgba(0, 255, 170, 0.15);
       border: 1px solid var(--green);
       color: var(--green);
@@ -91,14 +91,6 @@
       object-fit: contain;
       display: block;
       background: #050a0e;
-    }
-
-    /* Fallback image if video cannot load */
-    .gif-fallback {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: none;
     }
 
     /* Player Controls Bar */
@@ -144,6 +136,29 @@
       accent-color: var(--cyan);
       cursor: pointer;
     }
+
+    /* 4 Perspectives Quadrant Legend */
+    .quad-legend {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 960px;
+      margin-top: 8px;
+    }
+    .legend-tag {
+      background: #091720;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .legend-tag.active { border-color: var(--cyan); background: rgba(0, 229, 255, 0.08); }
+    .legend-title { font-weight: 700; color: var(--cyan); }
+    .legend-sub { font-size: 8px; color: var(--text-muted); }
 
     /* Telemetry Grid */
     .telemetry-grid {
@@ -240,10 +255,18 @@
 <body>
   <header>
     <div class="title-group">
-      <span class="badge badge-live">● CONNECTOME TWIN</span>
-      <span class="title-text">DOOMFLY ACTUAL GAMEPLAY 3D ISOMORPHISM</span>
+      <span class="badge badge-quad">● 4-PERSPECTIVE ISOMORPHISM</span>
+      <span class="title-text">DOOMFLY 4-WAY COMPILATION // 3D FLY WITH SHOTGUN</span>
     </div>
     <div class="header-chips">
+      <div class="chip">
+        <span class="chip-label">Embodied Actor</span>
+        <span class="chip-value">Drosophila + Shotgun</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Kinematics</span>
+        <span class="chip-value">Tripod Gait & Recoil</span>
+      </div>
       <div class="chip">
         <span class="chip-label">LIF Kernel</span>
         <span class="chip-value">146.9 FPS (C++)</span>
@@ -252,23 +275,16 @@
         <span class="chip-label">Visual Coverage</span>
         <span class="chip-value">100.0% (33×25)</span>
       </div>
-      <div class="chip">
-        <span class="chip-label">Ommatidia</span>
-        <span class="chip-value">825 Facets</span>
-      </div>
-      <div class="chip">
-        <span class="chip-label">Synapses</span>
-        <span class="chip-value">25,582,938</span>
-      </div>
     </div>
   </header>
 
   <section class="viewer-stage">
     <div class="video-wrapper">
       <video id="gameplayVideo" autoplay loop muted playsinline>
+        <source src="quad_perspective_gameplay.mp4" type="video/mp4">
         <source src="joined_isometric_3d_gameplay.mp4" type="video/mp4">
         <source src="actual_gameplay_3d_twin.mp4" type="video/mp4">
-        <img class="gif-fallback" src="joined_isometric_3d_gameplay.gif" alt="DoomFly Gameplay Twin">
+        <img class="gif-fallback" src="quad_perspective_gameplay.gif" alt="DoomFly 4-Perspective Compilation">
       </video>
     </div>
 
@@ -291,13 +307,61 @@
         <button onclick="toggleMute()" id="muteBtn">🔇</button>
       </div>
     </div>
+
+    <!-- 4-Quadrant Legend Indicators -->
+    <div class="quad-legend">
+      <div class="legend-tag active">
+        <span class="legend-title">Q1: 1ST-PERSON GZDOOM</span>
+        <span class="legend-sub">Native textures, shotgun, imps, HUD</span>
+      </div>
+      <div class="legend-tag active">
+        <span class="legend-title">Q2: 3D CONNECTOME TWIN</span>
+        <span class="legend-sub">3,030 fibers, JFRC2 brain, facet HUD</span>
+      </div>
+      <div class="legend-tag active">
+        <span class="legend-title">Q3: 3D FLY WITH SHOTGUN</span>
+        <span class="legend-sub">Tripod gait, recoil kick, wing flare</span>
+      </div>
+      <div class="legend-tag active">
+        <span class="legend-title">Q4: RESERVOIR TELEMETRY</span>
+        <span class="legend-sub">Door/Enemy decoders, T4 voltmeter</span>
+      </div>
+    </div>
   </section>
 
   <main class="telemetry-grid">
-    <!-- Card 1: Reservoir Readouts -->
+    <!-- Card 1: 3D Fly with Shotgun Kinematics -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Connectome Reservoir Decoders</span>
+        <span class="card-title">Q3: Embodied Fly Kinematics</span>
+        <span class="card-tag">NeuroMechFly Bio</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Locomotion Gait:</span>
+        <span class="stat-val" style="color: var(--cyan);" id="gaitVal">Tripod A/B Alternation</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Prothoracic (T1) Grasp:</span>
+        <span class="stat-val" style="color: var(--green);">DOOM 12-Gauge Shotgun</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Shotgun Recoil Kick:</span>
+        <span class="stat-val" id="recoilVal" style="color: var(--amber);">0.0 mm</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Muzzle Flash / Wing Flare:</span>
+        <span class="stat-val" id="flashVal" style="color: var(--text-muted);">Ready (Rest)</span>
+      </div>
+      <div class="status-box" style="margin-top: 4px;">
+        <span style="color: var(--text-muted);">Manipulation State:</span>
+        <span style="color: var(--green); font-weight: 700;" id="manipState">AIMING FORWARD</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Connectome Reservoir Decoders -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Q4: Reservoir Readouts</span>
         <span class="card-tag">Frozen MaleCNS</span>
       </div>
       <div class="stat-row">
@@ -330,34 +394,6 @@
       </div>
     </div>
 
-    <!-- Card 2: Calibrated Retinal Mapping -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Calibrated Retinal Mapping</span>
-        <span class="card-tag">100% Coverage</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Sampling Grid:</span>
-        <span class="stat-val">33 × 25 Regular (825 sites)</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Blind Spots Eliminated:</span>
-        <span class="stat-val" style="color: var(--green);">0.0% (100% Support)</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Ommatidial Columns:</span>
-        <span class="stat-val">300 Left / 525 Right</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Biological Matching:</span>
-        <span class="stat-val" style="color: var(--cyan);">Bipartite Displacement Min</span>
-      </div>
-      <div class="status-box" style="margin-top: 4px;">
-        <span style="color: var(--text-muted);">Decoupled Display:</span>
-        <span style="color: var(--cyan); font-weight: 700;">Superposition Atlas</span>
-      </div>
-    </div>
-
     <!-- Card 3: Biophysical CNS State -->
     <div class="card">
       <div class="card-header">
@@ -378,18 +414,18 @@
       </div>
       <div class="stat-row">
         <span class="stat-label">Kernel Evolution:</span>
-        <span class="stat-val">Lazy Exact Subthreshold</span>
+        <span class="stat-val">Lazy Exact Subthreshold (146.9 FPS)</span>
       </div>
       <div class="status-box" style="margin-top: 4px;">
-        <span style="color: var(--text-muted);">Saccade State:</span>
-        <span style="color: var(--green); font-weight: 700;">ACTIVE (Refractory 3)</span>
+        <span style="color: var(--text-muted);">Synaptic Accuracy:</span>
+        <span style="color: var(--cyan); font-weight: 700;">25,582,938 Exact</span>
       </div>
     </div>
 
     <!-- Card 4: Native GZDoom Telemetry -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Native GZDoom Telemetry</span>
+        <span class="card-title">Q1: Native GZDoom Engine</span>
         <span class="card-tag">E1M1 Hangar</span>
       </div>
       <div class="stat-row">
@@ -416,8 +452,8 @@
   </main>
 
   <footer>
-    <span>DOOMFLY · EMBODIED DROSOPHILA CONNECTOME TWIN</span>
-    <span>NO WHITE MARGINS · ZERO BLIND SPOTS · 100% REPRODUCIBLE</span>
+    <span>DOOMFLY · EMBODIED DROSOPHILA CONNECTOME TWIN · 4-WAY QUADRANT COMPILATION</span>
+    <span>NEUROMECHFLY BIOMECHANICS · TRIPOD GAIT · ZERO WHITE MARGINS</span>
   </footer>
 
   <script>
@@ -439,7 +475,6 @@
           `${String(curM).padStart(2, '0')}:${String(curS).padStart(2, '0')} / ` +
           `${String(durM).padStart(2, '0')}:${String(durS).padStart(2, '0')}`;
         
-        // Dynamically modulate telemetry readouts based on playback time
         updateDynamicTelemetry(video.currentTime / video.duration);
       }
     });
@@ -488,6 +523,10 @@
       const t4l = document.getElementById('t4lVal');
       const asym = document.getElementById('asymVal');
       const action = document.getElementById('actionVal');
+      const recoilVal = document.getElementById('recoilVal');
+      const flashVal = document.getElementById('flashVal');
+      const manipState = document.getElementById('manipState');
+      const gaitVal = document.getElementById('gaitVal');
 
       if (progress < 0.35) {
         // Door phase
@@ -503,6 +542,11 @@
         t4l.textContent = '-58.4 mV';
         asym.textContent = '+0.082';
         action.textContent = progress > 0.25 ? 'USE' : 'FORWARD';
+        recoilVal.textContent = '0.0 mm';
+        flashVal.textContent = 'Ready (Rest)';
+        manipState.textContent = progress > 0.25 ? 'R1 REACHING FOR DOOR' : 'HOLDING SHOTGUN';
+        manipState.style.color = progress > 0.25 ? '#00ffaa' : '#00e5ff';
+        gaitVal.textContent = 'Tripod Gait (Forward)';
       } else if (progress < 0.85) {
         // Combat phase
         doorBar.style.width = '8%';
@@ -516,6 +560,13 @@
         t4l.textContent = '-48.2 mV';
         asym.textContent = '+0.384 (Turning)';
         action.textContent = 'FIRE / COMBAT';
+        recoilVal.textContent = '18.0 mm (Absorption)';
+        recoilVal.style.color = '#ff3366';
+        flashVal.textContent = '★ DISCHARGE (Flash Active)';
+        flashVal.style.color = '#ff9800';
+        manipState.textContent = 'DISCHARGING SHOTGUN (RECOIL)';
+        manipState.style.color = '#ff3366';
+        gaitVal.textContent = 'Tripod Gait + Stance Brace';
       } else {
         // Clear phase
         doorBar.style.width = '15%';
@@ -529,6 +580,13 @@
         t4l.textContent = '-64.5 mV';
         asym.textContent = '-0.045';
         action.textContent = 'FORWARD';
+        recoilVal.textContent = '0.0 mm';
+        recoilVal.style.color = 'var(--text-muted)';
+        flashVal.textContent = 'Ready (Rest)';
+        flashVal.style.color = 'var(--text-muted)';
+        manipState.textContent = 'HOLDING SHOTGUN AT LOW READY';
+        manipState.style.color = '#00e5ff';
+        gaitVal.textContent = 'Tripod Gait (Advance)';
       }
     }
   </script>
