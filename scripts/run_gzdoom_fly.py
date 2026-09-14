@@ -20,7 +20,7 @@ _src_dir = str(Path(__file__).resolve().parent.parent / "src")
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-from fly_doom.control.controllers import ControlledT4Controller
+from fly_doom.control.controllers import ControlledT4Controller, DoorSeekingController
 from fly_doom.doom.gzdoom_target import GZDoomTarget
 from fly_doom.doom.macos_gzdoom_bridge import MacOSGZDoomBridge
 
@@ -34,6 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iwad", help="path to DOOM1.WAD or another IWAD")
     parser.add_argument("--frames", type=int, default=600)
     parser.add_argument("--refractory-ticks", type=int, default=3, help="post-saccadic suppression ticks to prevent spin loops")
+    parser.add_argument("--no-door-seeking", action="store_false", dest="door_seeking", default=True, help="disable Stage 1 navigation wrapper")
     return parser.parse_args()
 
 
@@ -41,7 +42,8 @@ def main() -> None:
     args = parse_args()
     target = GZDoomTarget(map_name=args.map, iwad=Path(args.iwad) if args.iwad else None)
     bridge = MacOSGZDoomBridge(target=target)
-    controller = ControlledT4Controller(width=64, height=64, saccade_refractory_ticks=args.refractory_ticks)
+    base = ControlledT4Controller(width=64, height=64, saccade_refractory_ticks=args.refractory_ticks)
+    controller = DoorSeekingController(base) if args.door_seeking else base
 
     try:
         window = bridge.launch() if args.launch else bridge.attach(pid=args.attach_pid)
@@ -49,10 +51,21 @@ def main() -> None:
         obs = bridge.reset()
         for frame in range(args.frames):
             action = controller.select_action(obs)
-            obs, _, _, _ = bridge.step(action)
-            if frame % 30 == 0:
+            obs, _, done, _ = bridge.step(action)
+            if frame % 15 == 0 or action.name in ("USE", "FIRE"):
                 state = controller.get_neural_state()
-                print(f"frame={frame:04d} action={action.name:11s} norm_asym={state.get('norm_asymmetry', 0.0):+.3f}")
+                tgt_deg = state.get("target_angle_deg", float("nan"))
+                fb_t = state.get("fb_steer_torque", 0.0)
+                sez_h = state.get("sez_acid_detected", 0.0)
+                exit_sw = state.get("at_exit_switch", 0.0)
+                print(
+                    f"frame={frame:04d} action={action.name:10s} kills={obs.kill_count} HP={obs.health:3.0f}% "
+                    f"tgt_ang={tgt_deg:+6.1f}° fb_t={fb_t:+.2f} sez={'ACID' if sez_h > 0 else 'SAFE'} "
+                    f"{'EXIT_SWITCH!' if exit_sw > 0 else ''}"
+                )
+            if done:
+                print(f"Stage completed or episode terminated at frame {frame}!")
+                break
     finally:
         bridge.close()
 
