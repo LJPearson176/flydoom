@@ -83,3 +83,22 @@ def test_fly_shotgun_renderer_pipeline():
     # Verify frame contains rendered elements (not blank)
     arr = np.array(frame)
     assert np.mean(arr) > 10.0
+
+
+def test_fly_facing_up_projection_orientation():
+    """Verify 3D model is projected facing UP to match first-person gameplay orientation.
+
+    In screen space (Y=0 is top, Y=height is bottom):
+    Muzzle Y < Head Y < Thorax Y < Abdomen Y
+    """
+    renderer = FlyShotgunRenderer(width=680, height=540)
+    p_muz = renderer.project((0.0, -185.0, 4.0))
+    p_head = renderer.project((0.0, -85.0, 8.0))
+    p_th = renderer.project((0.0, 0.0, 0.0))
+    p_abd = renderer.project((0.0, 228.0, -58.0))
+
+    assert p_muz is not None and p_head is not None and p_th is not None and p_abd is not None
+    assert p_muz[1] < p_head[1] < p_th[1] < p_abd[1], (
+        f"Fly not facing UP! Projected Y coordinates: muzzle={p_muz[1]:.1f}, "
+        f"head={p_head[1]:.1f}, thorax={p_th[1]:.1f}, abdomen={p_abd[1]:.1f}"
+    )

@@ -23,18 +23,18 @@ class FlyShotgunRenderer:
         self.height = height
         self.model = AnatomicalFlyShotgunModel()
 
-        # Camera setup: 3rd-person follow action cam
-        self.cam_yaw = 0.46     # ~26 degrees
-        self.cam_pitch = 0.28   # ~16 degrees
-        self.cam_dist = 520.0
-        self.cam_target = np.array([0.0, -40.0, -10.0], dtype=np.float32)
-        self.focal = 580.0
+        # Camera setup: 3rd-person follow action cam (facing UP into gameplay screen)
+        self.cam_yaw = -0.12     # subtle 3D perspective (~7 deg)
+        self.cam_pitch = 0.34    # elevated chase angle (~19.5 deg)
+        self.cam_dist = 570.0
+        self.cam_target = np.array([0.0, -15.0, -10.0], dtype=np.float32)
+        self.focal = 590.0
 
     def project(self, p: np.ndarray | Tuple[float, float, float]) -> Optional[Tuple[float, float, float]]:
         """Project 3D point (x, y, z) into 2D screen coordinates with depth."""
         x, y, z = p[0], p[1], p[2]
         tx = x - self.cam_target[0]
-        ty = y - self.cam_target[1]
+        ty = -(y - self.cam_target[1])  # Inverted Y: anterior (-Y) points UP into screen
         tz = z - self.cam_target[2]
 
         cosY, sinY = math.cos(self.cam_yaw), math.sin(self.cam_yaw)
@@ -51,7 +51,7 @@ class FlyShotgunRenderer:
 
         scale = self.focal / eyeZ
         cx = self.width // 2
-        cy = self.height // 2 + 15
+        cy = self.height // 2 + 10
         return (cx + x1 * scale, cy - y2 * scale, eyeZ)
 
     def render_frame(
@@ -92,16 +92,17 @@ class FlyShotgunRenderer:
             if p1 and p2:
                 draw.line([(p1[0], p1[1]), (p2[0], p2[1])], fill=(12, 26, 34), width=1)
 
-        # 2. Ground Shadow beneath fly body
-        shadow_pts = [
-            (-60.0, -100.0, ground_z),
-            (60.0, -100.0, ground_z),
-            (80.0, 120.0, ground_z),
-            (-80.0, 120.0, ground_z),
-        ]
-        s_proj = [self.project(sp) for sp in shadow_pts]
-        if all(sp is not None for sp in s_proj):
-            draw.polygon([(sp[0], sp[1]) for sp in s_proj], fill=(3, 6, 8))
+        # 2. Ground Shadow beneath fly body (smooth oval)
+        shadow_poly = []
+        for ang_deg in range(0, 360, 20):
+            rad = math.radians(ang_deg)
+            sx = 50.0 * math.cos(rad)
+            sy = 10.0 + 110.0 * math.sin(rad)
+            sp = self.project((sx, sy, ground_z))
+            if sp:
+                shadow_poly.append((sp[0], sp[1]))
+        if len(shadow_poly) >= 6:
+            draw.polygon(shadow_poly, fill=(3, 7, 10))
 
         # 3. Render Segments with Depth Ordering
         # Primitive components list: (depth_z, render_func)
@@ -129,8 +130,9 @@ class FlyShotgunRenderer:
                         draw.ellipse([pf[0]-2, pf[1]-2, pf[0]+2, pf[1]+2], fill=(60, 40, 20))
                 return _draw
 
-            avg_z = (base[1] + foot[1]) * 0.5
-            render_queue.append((float(avg_z), make_leg_draw()))
+            p_base = self.project(base)
+            d = p_base[2] if p_base else 500.0
+            render_queue.append((float(d), make_leg_draw()))
 
         # (b) Segmented Abdomen
         # 7 segments extending posteriorly
@@ -153,7 +155,9 @@ class FlyShotgunRenderer:
                         draw.ellipse([p_c[0] - rx, p_c[1] - ry, p_c[0] + rx, p_c[1] + ry], fill=col, outline=(50, 30, 15), width=1)
                 return _draw
 
-            render_queue.append((float(sy), make_abd_draw()))
+            p_c = self.project((0.0, sy, sz))
+            d = p_c[2] if p_c else 400.0
+            render_queue.append((float(d), make_abd_draw()))
 
         # (c) Wings (Dorsal)
         def draw_wings():
@@ -186,7 +190,7 @@ class FlyShotgunRenderer:
                 draw.line([(rw_proj[0][0], rw_proj[0][1]), (rw_proj[2][0], rw_proj[2][1])], fill=(160, 220, 255), width=1)
                 draw.line([(rw_proj[0][0], rw_proj[0][1]), (rw_proj[3][0], rw_proj[3][1])], fill=(140, 200, 240), width=1)
 
-        render_queue.append((50.0, draw_wings))
+        render_queue.append((480.0, draw_wings))
 
         # (d) Thorax Capsule
         def draw_thorax():
@@ -199,12 +203,13 @@ class FlyShotgunRenderer:
                 draw.ellipse([pt_c[0] - rx, pt_c[1] - ry, pt_c[0] + rx, pt_c[1] + ry], fill=(165, 115, 55), outline=(90, 55, 25), width=2)
                 # Scutellum dorsal plate
                 draw.polygon([
-                    (pt_c[0], pt_c[1] + ry * 0.7),
-                    (pt_c[0] - rx * 0.35, pt_c[1] + ry * 0.1),
-                    (pt_c[0] + rx * 0.35, pt_c[1] + ry * 0.1),
+                    (pt_c[0], pt_c[1] - ry * 0.2),
+                    (pt_c[0] - rx * 0.35, pt_c[1] + ry * 0.5),
+                    (pt_c[0] + rx * 0.35, pt_c[1] + ry * 0.5),
                 ], fill=(195, 140, 70), outline=(110, 70, 35))
 
-        render_queue.append((0.0, draw_thorax))
+        p_th = self.project((0.0, 0.0, 0.0))
+        render_queue.append((float(p_th[2]) if p_th else 540.0, draw_thorax))
 
         # (e) Head, Red Ommatidial Eyes, and Antennae
         def draw_head():
@@ -229,7 +234,7 @@ class FlyShotgunRenderer:
                 ery = 32.0 * (self.focal / pe_l[2])
                 draw.ellipse([pe_l[0] - erx, pe_l[1] - ery, pe_l[0] + erx, pe_l[1] + ery], fill=eye_col, outline=(110, 15, 20), width=1)
                 # Specular eye shine
-                draw.ellipse([pe_l[0] - erx * 0.4, pe_l[1] - ery * 0.5, pe_l[0], pe_l[1] - ery * 0.2], fill=(255, 140, 150))
+                draw.ellipse([pe_l[0] - erx * 0.3, pe_l[1] - ery * 0.4, pe_l[0] + erx * 0.2, pe_l[1] - ery * 0.1], fill=(255, 140, 150))
 
             # Right Eye
             pe_r = self.project((42.0, hy - 8.0, hz + 5.0))
@@ -237,7 +242,7 @@ class FlyShotgunRenderer:
                 erx = 24.0 * (self.focal / pe_r[2])
                 ery = 32.0 * (self.focal / pe_r[2])
                 draw.ellipse([pe_r[0] - erx, pe_r[1] - ery, pe_r[0] + erx, pe_r[1] + ery], fill=eye_col, outline=(110, 15, 20), width=1)
-                draw.ellipse([pe_r[0] + erx * 0.1, pe_r[1] - ery * 0.5, pe_r[0] + erx * 0.5, pe_r[1] - ery * 0.2], fill=(255, 140, 150))
+                draw.ellipse([pe_r[0] - erx * 0.3, pe_r[1] - ery * 0.4, pe_r[0] + erx * 0.2, pe_r[1] - ery * 0.1], fill=(255, 140, 150))
 
             # Antennae (pointing forward)
             pa_l1 = self.project((-12.0, hy - 32.0, hz - 4.0))
@@ -253,7 +258,8 @@ class FlyShotgunRenderer:
                 draw.line([(pa_r1[0], pa_r1[1]), (pa_r2[0], pa_r2[1])], fill=(90, 50, 20), width=2)
                 draw.line([(pa_r2[0], pa_r2[1]), (pa_r2[0] + 6, pa_r2[1] - 8)], fill=(120, 70, 30), width=1)
 
-        render_queue.append((-85.0, draw_head))
+        p_h = self.project((0.0, -85.0, 8.0))
+        render_queue.append((float(p_h[2]) if p_h else 580.0, draw_head))
 
         # (f) DOOM Shotgun and Prothoracic Foreleg Grasp (L1 and R1)
         def draw_shotgun_and_forelegs():
@@ -273,7 +279,7 @@ class FlyShotgunRenderer:
             # Pump Fore-end
             if p_pump and p_muzzle:
                 # Barrel
-                draw.line([(p_pump[0], p_pump[1]), (p_muzzle[0], p_muzzle[1])], fill=(88, 95, 108), width=5)   # dual barrel
+                draw.line([(p_pump[0], p_pump[1]), (p_muzzle[0], p_muzzle[1])], fill=(88, 95, 108), width=6)   # dual barrel
                 # Fore-end pump (ribbed)
                 draw.ellipse([p_pump[0] - 8, p_pump[1] - 6, p_pump[0] + 8, p_pump[1] + 6], fill=(110, 75, 45), outline=(50, 35, 20))
 
@@ -329,7 +335,7 @@ class FlyShotgunRenderer:
                 if ps:
                     draw.rectangle([ps[0] - 4, ps[1] - 2, ps[0] + 4, ps[1] + 2], fill=(220, 40, 30), outline=(255, 215, 0))
 
-        render_queue.append((-120.0, draw_shotgun_and_forelegs))
+        render_queue.append((530.0, draw_shotgun_and_forelegs))
 
         # (g) Execute sorted render queue from back to front (largest depth to smallest)
         render_queue.sort(key=lambda item: item[0], reverse=True)
