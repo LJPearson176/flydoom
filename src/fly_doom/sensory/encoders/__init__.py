@@ -8,6 +8,10 @@ from fly_doom.sensory.encoders.calibrated_retina import (
     sample_retina,
     sampling_support,
 )
+from fly_doom.sensory.encoders.facet_atlas import (
+    CompoundEyeFacetAtlas,
+    CompoundEyeFacet,
+)
 from fly_doom.sensory.encoders.delta import EncoderDelta
 
 __all__ = [
@@ -18,5 +22,8 @@ __all__ = [
     "balanced_retina",
     "sample_retina",
     "sampling_support",
+    "CompoundEyeFacetAtlas",
+    "CompoundEyeFacet",
 ]
+
 

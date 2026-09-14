@@ -30,6 +30,7 @@ def main():
         mesh_data = json.load(f)
 
     from fly_doom.dynamics.fan_shaped_body import Stage1WaypointGraph
+    from fly_doom.sensory.encoders.facet_atlas import CompoundEyeFacetAtlas
 
     wp_graph = Stage1WaypointGraph()
     stage1_waypoints = [
@@ -45,6 +46,8 @@ def main():
         for wp in wp_graph.waypoints
     ]
 
+    retinal_atlas = CompoundEyeFacetAtlas()
+
     payload = {
         "anatomy": cns_data["anatomy"],
         "episodes": cns_data["episodes"],
@@ -54,6 +57,7 @@ def main():
         "neuropil_meshes": mesh_data["neuropils"],
         "high_fidelity_pathways": model_3d.get("high_fidelity_pathways"),
         "stage1_waypoints": stage1_waypoints,
+        "retinal_atlas": retinal_atlas.to_dict(),
     }
     payload_json = json.dumps(payload)
 
@@ -507,6 +511,7 @@ def main():
       <div class="chip"><span>SWC SKELETONS</span><strong>14 NEURONS</strong></div>
       <div class="chip"><span>EM SYNAPSES</span><strong>262 VERIFIED</strong></div>
       <div class="chip"><span>CARTRIDGES</span><strong>128 COLS</strong></div>
+      <div class="chip"><span>COMPOUND EYE</span><strong>825 FACETS</strong></div>
       <div class="chip"><span>STAGE 1 PATH</span><strong>7 ZONES (SPAWN &rarr; EXIT)</strong></div>
     </div>
   </header>
@@ -839,6 +844,22 @@ def main():
           <div class="telem-box"><span>DAMAGE DEALT</span><strong id="telemDmg">0.0</strong></div>
           <div class="telem-box"><span>ASYMMETRY (Δ̂)</span><strong id="telemAsym">0.000</strong></div>
           <div class="telem-box"><span>FIRING LOCK</span><strong class="lock" id="telemLock">NO TARGET</strong></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">
+          <span>COMPOUND-EYE FACET ATLAS</span>
+          <span style="font-size:9px; color:var(--cyan);">825 COLUMN FACETS</span>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+          Decoupled display geometry (fly_ocr). Curved left &amp; right compound eyes with 825 ommatidial column facets (300 L, 525 R) illuminated in real time by biophysical visual flow.
+        </div>
+        <canvas id="retinaCanvas" width="300" height="120" style="width:100%; height:120px; background:#04090d; border:1px solid var(--border); border-radius:4px; display:block;"></canvas>
+        <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); margin-top:5px;">
+          <span>LEFT EYE (300 COLS)</span>
+          <span id="lblSuperposition" style="color:var(--cyan);">NEURAL SUPERPOSITION</span>
+          <span>RIGHT EYE (525 COLS)</span>
         </div>
       </div>
 
@@ -1669,6 +1690,94 @@ def main():
       return `rgb(${{r}},${{g}},${{b}})`;
     }}
 
+    function drawCompoundEyeAtlas(asym, isFire, isDoor, isDamage) {{
+      const retinaCanvas = document.getElementById("retinaCanvas");
+      if (!retinaCanvas || !DATA.retinal_atlas) return;
+      const rCtx = retinaCanvas.getContext("2d");
+      if (!rCtx) return;
+      const rw = retinaCanvas.width;
+      const rh = retinaCanvas.height;
+      rCtx.clearRect(0, 0, rw, rh);
+
+      // Draw background ovals for Left & Right compound eyes
+      const eyes = [
+        {{ side: "L", cx: rw * 0.25, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455 }},
+        {{ side: "R", cx: rw * 0.75, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455 }}
+      ];
+
+      for (let i = 0; i < eyes.length; i++) {{
+        const e = eyes[i];
+        rCtx.save();
+        rCtx.beginPath();
+        rCtx.ellipse(e.cx, e.cy, e.rx, e.ry, 0, 0, Math.PI * 2);
+        rCtx.fillStyle = "#211822";
+        rCtx.fill();
+        rCtx.strokeStyle = "#78504b";
+        rCtx.lineWidth = 1;
+        rCtx.stroke();
+        rCtx.restore();
+      }}
+
+      // Hexagonal facets
+      const radius = Math.max(1.8, Math.min(rw / 140.0, rh / 58.0));
+      const facets = DATA.retinal_atlas.facets;
+      for (let i = 0; i < facets.length; i++) {{
+        const f = facets[i];
+        const isLeft = (f.eye === "L");
+        const cx = (isLeft ? rw * 0.25 : rw * 0.75) + f.x * rw * 0.203;
+        const cy = rh * 0.48 + f.y * rh * 0.404;
+
+        // Base luminance + dynamic visual flow / combat modulation
+        let b = 0.22;
+        const drive = isLeft ? Math.max(0, -asym) : Math.max(0, asym);
+        b += drive * 0.70;
+
+        if (isFire) b = Math.min(1.0, b + 0.5);
+        if (isDoor) b = Math.min(1.0, b + 0.4);
+        if (isDamage) b = Math.min(1.0, b + 0.6);
+        b = Math.max(0.0, Math.min(1.0, b));
+
+        let cr, cg, cb;
+        if (isFire) {{
+          cr = Math.round(255 * b);
+          cg = Math.round(60 * b);
+          cb = 0;
+        }} else if (isDoor) {{
+          cr = 0;
+          cg = Math.round(255 * b);
+          cb = Math.round(170 * b);
+        }} else if (isDamage) {{
+          cr = Math.round(255 * b);
+          cg = Math.round(23 * b);
+          cb = Math.round(68 * b);
+        }} else {{
+          // Classic fly_ocr monotone copper luminance scale
+          cr = Math.round(45 + 210 * b);
+          cg = Math.round(24 + 191 * b);
+          cb = Math.round(28 + 147 * b);
+        }}
+
+        // Draw regular hexagon
+        rCtx.beginPath();
+        for (let k = 0; k < 6; k++) {{
+          const ang = (Math.PI / 3.0) * k;
+          const px = cx + radius * Math.cos(ang);
+          const py = cy + radius * Math.sin(ang);
+          if (k === 0) rCtx.moveTo(px, py);
+          else rCtx.lineTo(px, py);
+        }}
+        rCtx.closePath();
+        rCtx.fillStyle = `rgb(${{cr}},${{cg}},${{cb}})`;
+        rCtx.fill();
+      }}
+
+      // Anatomical hemisphere labels
+      rCtx.fillStyle = "#94acbc";
+      rCtx.font = "10px ui-monospace, monospace";
+      rCtx.fillText("L", rw * 0.23, rh * 0.94);
+      rCtx.fillText("R", rw * 0.73, rh * 0.94);
+    }}
+
     let particlePhase = 0.0;
 
     function render() {{
@@ -1710,6 +1819,8 @@ def main():
         else if (state.stimType === "door") isDoor = true;
         else if (state.stimType === "panic") isDamage = true;
       }}
+
+      drawCompoundEyeAtlas(asym, isFire, isDoor, isDamage);
 
       particlePhase += 0.04;
 

@@ -23,6 +23,9 @@ from fly_doom.doom.gzdoom_target import GZDoomTarget
 from fly_doom.doom.gzdoom_telemetry import GZDoomTelemetryReader
 from fly_doom.doom.macos_gzdoom_bridge import MacOSGZDoomBridge
 from fly_doom.dynamics.compartmental_t4 import CompartmentModelType
+from fly_doom.sensory.encoders.facet_atlas import CompoundEyeFacetAtlas
+from fly_doom.sensory.encoders.calibrated_retina import EncoderCalibratedRetina, sample_retina
+
 
 
 def hex_to_rgb(hex_str: str) -> tuple[int, int, int]:
@@ -39,6 +42,8 @@ def render_3d_nervous_system(
     width: int = 640,
     height: int = 540,
     pulse_phase: float = 0.0,
+    facet_atlas: Optional[CompoundEyeFacetAtlas] = None,
+    retina_samples: Optional[np.ndarray] = None,
 ) -> Image.Image:
     img = Image.new("RGB", (width, height), (5, 10, 14))
     draw = ImageDraw.Draw(img)
@@ -218,6 +223,25 @@ def render_3d_nervous_system(
     draw.text((16, 11), "ISOMETRIC 3D FLY NERVOUS SYSTEM", fill=(0, 229, 255))
     draw.text((320, 11), "JFRC2 TEMPLATE · 7 SWC SKELETONS · 178 SYNAPSES", fill=(88, 223, 194))
 
+    # Compound-Eye Facet Atlas HUD Inset (fly_ocr decoupled compound-eye atlas)
+    if facet_atlas is not None:
+        card_w = 224
+        card_h = 104
+        card_x = width - card_w - 12
+        card_y = 44
+        draw.rectangle([card_x, card_y, card_x + card_w, card_y + card_h], fill=(8, 16, 22), outline=(22, 50, 62), width=1)
+        draw.text((card_x + 8, card_y + 5), "COMPOUND EYE ATLAS", fill=(0, 229, 255))
+        draw.text((card_x + card_w - 60, card_y + 5), "825 COLS", fill=(88, 223, 194))
+        facet_atlas.render_pil(
+            draw,
+            x=card_x + 6,
+            y=card_y + 18,
+            w=card_w - 12,
+            h=card_h - 22,
+            values=retina_samples,
+            mode="copper",
+        )
+
     # Bottom Telemetry Cards in 3D panel (Detailed Activation Mapping)
     draw.rectangle([12, height - 104, width - 12, height - 6], fill=(9, 20, 27), outline=(22, 50, 62), width=1)
 
@@ -330,6 +354,8 @@ def run_actual_gameplay_recording(
         bridge.close()
 
     print(f"Rendering {len(recorded_ticks)} synchronized 3D nervous system composite frames...", flush=True)
+    atlas = CompoundEyeFacetAtlas()
+    retina_encoder = EncoderCalibratedRetina()
     gif_frames = []
     for step, action_name, health_val, ammo_val, kills_val, real_rgb, state_combined in recorded_ticks:
         # 1. Left side: ACTUAL REAL GZDoom Gameplay Frame
@@ -352,9 +378,22 @@ def run_actual_gameplay_recording(
             border_col = (255, 160, 0)
         real_draw.rectangle([0, 0, 719, 539], outline=border_col, width=2)
 
+        # Compute real calibrated retinal sampling for compound-eye facet illumination
+        gray_frame = np.mean(real_rgb, axis=2).astype(np.float32)
+        retina_samples = sample_retina(gray_frame, retina_encoder.calibrated_uv)
+
         # 2. Right side: Isometric 3D Drosophila Nervous System
         pulse_phase = (step * 0.08) % 1.0
-        brain_img = render_3d_nervous_system(state_combined, model_3d, mesh_data, width=640, height=540, pulse_phase=pulse_phase)
+        brain_img = render_3d_nervous_system(
+            state_combined,
+            model_3d,
+            mesh_data,
+            width=640,
+            height=540,
+            pulse_phase=pulse_phase,
+            facet_atlas=atlas,
+            retina_samples=retina_samples,
+        )
 
         # 3. Composite into single frame: 1360 x 540
         composite = Image.new("RGB", (1360, 540), (5, 10, 14))
