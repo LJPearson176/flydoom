@@ -384,7 +384,37 @@ def export_joined_clip(
     output_gif: Optional[Path] = None,
     fps: int = 12,
     max_frames: int = 150,
+    source_clip: Optional[Path] = None,
+    force_synthetic: bool = False,
 ) -> None:
+    # Check if authentic gameplay clip is available and not forcing synthetic
+    if not force_synthetic:
+        actual_candidates = [
+            source_clip,
+            Path("runs/doom004_actual_gameplay_3d_twin.mp4"),
+            Path("assets/actual_gameplay_3d_twin.mp4"),
+        ]
+        valid_source = next((p for p in actual_candidates if p and p.exists()), None)
+        if valid_source:
+            print(f"Using authentic live GZDoom gameplay recording: {valid_source}")
+            output_mp4 = Path(output_mp4)
+            output_mp4.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(valid_source, output_mp4)
+            print(f"Saved authentic gameplay MP4: {output_mp4} ({output_mp4.stat().st_size / 1024:.1f} KB)")
+
+            actual_gif_candidates = [
+                valid_source.with_suffix(".gif"),
+                Path("runs/doom004_actual_gameplay_3d_twin.gif"),
+                Path("assets/actual_gameplay_3d_twin.gif"),
+            ]
+            valid_gif_source = next((p for p in actual_gif_candidates if p and p.exists()), None)
+            if output_gif and valid_gif_source:
+                output_gif = Path(output_gif)
+                output_gif.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(valid_gif_source, output_gif)
+                print(f"Saved authentic gameplay GIF: {output_gif} ({output_gif.stat().st_size / 1024:.1f} KB)")
+            return
+
     parquet_path = episode_dir / "trajectory.parquet"
     if not parquet_path.exists():
         raise FileNotFoundError(f"Missing trajectory.parquet in {episode_dir}")
@@ -468,6 +498,17 @@ def main():
         help="Path to episode directory containing trajectory.parquet",
     )
     parser.add_argument(
+        "--source-clip",
+        type=Path,
+        default=Path("runs/doom004_actual_gameplay_3d_twin.mp4"),
+        help="Path to authentic recorded gameplay MP4 clip",
+    )
+    parser.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="Force rendering synthetic perspective corridor instead of authentic recorded gameplay",
+    )
+    parser.add_argument(
         "--output-mp4",
         type=Path,
         default=Path("runs/doom004_lesions_v1/joined_isometric_3d_gameplay.mp4"),
@@ -482,7 +523,14 @@ def main():
     parser.add_argument("--fps", type=int, default=12, help="Frames per second")
     args = parser.parse_args()
 
-    export_joined_clip(args.episode_dir, args.output_mp4, args.output_gif, fps=args.fps)
+    export_joined_clip(
+        args.episode_dir,
+        args.output_mp4,
+        args.output_gif,
+        fps=args.fps,
+        source_clip=args.source_clip,
+        force_synthetic=args.synthetic,
+    )
 
     # Copy to artifact directory
     artifact_dir = Path("/Users/ljp176/.gemini/antigravity/brain/fd394349-d70b-4c24-b0d6-2c95c6d775d7")
@@ -499,3 +547,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

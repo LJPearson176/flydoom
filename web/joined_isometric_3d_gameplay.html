@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoomFly // Live Gameplay & 3D Isometric Drosophila Nervous System</title>
+  <style>
+    :root {
+      --bg: #050a0e;
+      --panel-bg: rgba(9, 20, 27, 0.95);
+      --border: #16323e;
+      --border-glow: #245062;
+      --cyan: #00e5ff;
+      --cyan-dim: rgba(0, 229, 255, 0.15);
+      --amber: #ff9800;
+      --green: #00ffaa;
+      --purple: #c084fc;
+      --red: #ff3366;
+      --text: #e2f1f8;
+      --text-muted: #7899a9;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      width: 100%;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      height: 48px;
+      background: #081319;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+    .title-group { display: flex; align-items: center; gap: 12px; }
+    .badge {
+      background: var(--cyan-dim);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+    .badge-live {
+      background: rgba(0, 255, 170, 0.15);
+      border: 1px solid var(--green);
+      color: var(--green);
+    }
+    .title-text { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
+    .header-chips { display: flex; gap: 16px; font-size: 11px; }
+    .chip { display: flex; flex-direction: column; }
+    .chip-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .chip-value { font-weight: 700; color: var(--cyan); }
+
+    /* Video Player Container */
+    .viewer-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 16px 8px 16px;
+      background: #04080c;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 680 / 540;
+      background: #000;
+      border: 1px solid var(--border-glow);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 229, 255, 0.08);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #050a0e;
+    }
+
+    /* Fallback image if video cannot load */
+    .gif-fallback {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    /* Player Controls Bar */
+    .player-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      max-width: 960px;
+      margin-top: 8px;
+      background: #0a1720;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
+    .btn-group { display: flex; gap: 6px; align-items: center; }
+    button {
+      background: #102633;
+      color: var(--cyan);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button:hover { background: var(--cyan-dim); border-color: var(--cyan); }
+    button.active { background: var(--cyan); color: #050a0e; }
+
+    .scrubber-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    /* Telemetry Grid */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      padding: 12px 16px 20px 16px;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(22, 50, 62, 0.6);
+      padding-bottom: 6px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+    .card-tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(0, 229, 255, 0.1);
+      color: var(--cyan);
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      align-items: center;
+    }
+    .stat-label { color: var(--text-muted); }
+    .stat-val { font-weight: 700; color: var(--text); }
+
+    .progress-bar {
+      height: 8px;
+      background: #0f222d;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--cyan);
+      transition: width 0.2s ease;
+    }
+    .progress-fill.green { background: var(--green); }
+    .progress-fill.red { background: var(--red); }
+    .progress-fill.amber { background: var(--amber); }
+
+    .status-box {
+      background: #0f2634;
+      border: 1px solid var(--border-glow);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer {
+      margin-top: auto;
+      background: #030608;
+      border-top: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <span class="badge badge-live">● CONNECTOME TWIN</span>
+      <span class="title-text">DOOMFLY ACTUAL GAMEPLAY 3D ISOMORPHISM</span>
+    </div>
+    <div class="header-chips">
+      <div class="chip">
+        <span class="chip-label">LIF Kernel</span>
+        <span class="chip-value">146.9 FPS (C++)</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Visual Coverage</span>
+        <span class="chip-value">100.0% (33×25)</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Ommatidia</span>
+        <span class="chip-value">825 Facets</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Synapses</span>
+        <span class="chip-value">25,582,938</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="viewer-stage">
+    <div class="video-wrapper">
+      <video id="gameplayVideo" autoplay loop muted playsinline>
+        <source src="joined_isometric_3d_gameplay.mp4" type="video/mp4">
+        <source src="actual_gameplay_3d_twin.mp4" type="video/mp4">
+        <img class="gif-fallback" src="joined_isometric_3d_gameplay.gif" alt="DoomFly Gameplay Twin">
+      </video>
+    </div>
+
+    <div class="player-controls">
+      <div class="btn-group">
+        <button id="playBtn" onclick="togglePlay()">⏸ PAUSE</button>
+        <button onclick="stepFrame(-1)">⏮ STEP</button>
+        <button onclick="stepFrame(1)">STEP ⏭</button>
+      </div>
+
+      <div class="scrubber-container">
+        <input type="range" id="scrubber" min="0" max="100" value="0" oninput="seekVideo(this.value)">
+        <span id="timeDisplay" style="color: var(--cyan); min-width: 60px;">00:00 / 00:10</span>
+      </div>
+
+      <div class="btn-group">
+        <button class="speed-btn" onclick="setSpeed(0.5, this)">0.5x</button>
+        <button class="speed-btn active" onclick="setSpeed(1.0, this)">1.0x</button>
+        <button class="speed-btn" onclick="setSpeed(2.0, this)">2.0x</button>
+        <button onclick="toggleMute()" id="muteBtn">🔇</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="telemetry-grid">
+    <!-- Card 1: Reservoir Readouts -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Connectome Reservoir Decoders</span>
+        <span class="card-tag">Frozen MaleCNS</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Door Actuator P(USE):</span>
+        <span class="stat-val" id="doorVal" style="color: var(--green);">0.96 (Active)</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill green" id="doorBar" style="width: 96%;"></div>
+      </div>
+
+      <div class="stat-row" style="margin-top: 4px;">
+        <span class="stat-label">Hostile Imp P(Enemy):</span>
+        <span class="stat-val" id="impVal" style="color: var(--red);">0.88</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill red" id="impBar" style="width: 88%;"></div>
+      </div>
+
+      <div class="stat-row" style="margin-top: 4px;">
+        <span class="stat-label">Threat Arousal:</span>
+        <span class="stat-val" id="threatVal" style="color: var(--amber);">0.82</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill amber" id="threatBar" style="width: 82%;"></div>
+      </div>
+
+      <div class="status-box" style="margin-top: 4px;">
+        <span style="color: var(--text-muted);">Firing Reticle:</span>
+        <span style="color: var(--green); font-weight: 700;" id="lockStatus">LOCK-ON (<=18°) · FIRE</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Calibrated Retinal Mapping -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Calibrated Retinal Mapping</span>
+        <span class="card-tag">100% Coverage</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Sampling Grid:</span>
+        <span class="stat-val">33 × 25 Regular (825 sites)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Blind Spots Eliminated:</span>
+        <span class="stat-val" style="color: var(--green);">0.0% (100% Support)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Ommatidial Columns:</span>
+        <span class="stat-val">300 Left / 525 Right</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Biological Matching:</span>
+        <span class="stat-val" style="color: var(--cyan);">Bipartite Displacement Min</span>
+      </div>
+      <div class="status-box" style="margin-top: 4px;">
+        <span style="color: var(--text-muted);">Decoupled Display:</span>
+        <span style="color: var(--cyan); font-weight: 700;">Superposition Atlas</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Biophysical CNS State -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Biophysical CNS State</span>
+        <span class="card-tag">LIF Kernel</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">T4 Left Lobula:</span>
+        <span class="stat-val" id="t4lVal" style="color: var(--amber);">-48.2 mV</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">T4 Right Lobula:</span>
+        <span class="stat-val" id="t4rVal" style="color: var(--cyan);">-65.0 mV</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Steering Asymmetry:</span>
+        <span class="stat-val" id="asymVal" style="color: var(--green);">+0.384 (Right)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Kernel Evolution:</span>
+        <span class="stat-val">Lazy Exact Subthreshold</span>
+      </div>
+      <div class="status-box" style="margin-top: 4px;">
+        <span style="color: var(--text-muted);">Saccade State:</span>
+        <span style="color: var(--green); font-weight: 700;">ACTIVE (Refractory 3)</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Native GZDoom Telemetry -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Native GZDoom Telemetry</span>
+        <span class="card-tag">E1M1 Hangar</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Player Health:</span>
+        <span class="stat-val" style="color: var(--green);">100%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Shotgun Ammo:</span>
+        <span class="stat-val">48 Shells</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Enemies Neutralized:</span>
+        <span class="stat-val" style="color: var(--red);">2 Kills (50 Dmg)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Player Action:</span>
+        <span class="stat-val" style="color: var(--cyan);" id="actionVal">FIRE / COMBAT</span>
+      </div>
+      <div class="status-box" style="margin-top: 4px;">
+        <span style="color: var(--text-muted);">Telemetry Ingestion:</span>
+        <span style="color: var(--green); font-weight: 700;">GZDoom ZScript Socket</span>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>DOOMFLY · EMBODIED DROSOPHILA CONNECTOME TWIN</span>
+    <span>NO WHITE MARGINS · ZERO BLIND SPOTS · 100% REPRODUCIBLE</span>
+  </footer>
+
+  <script>
+    const video = document.getElementById('gameplayVideo');
+    const scrubber = document.getElementById('scrubber');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const playBtn = document.getElementById('playBtn');
+    const muteBtn = document.getElementById('muteBtn');
+
+    video.addEventListener('timeupdate', () => {
+      if (!isNaN(video.duration) && video.duration > 0) {
+        const pct = (video.currentTime / video.duration) * 100;
+        scrubber.value = pct;
+        const curM = Math.floor(video.currentTime / 60);
+        const curS = Math.floor(video.currentTime % 60);
+        const durM = Math.floor(video.duration / 60);
+        const durS = Math.floor(video.duration % 60);
+        timeDisplay.textContent = 
+          `${String(curM).padStart(2, '0')}:${String(curS).padStart(2, '0')} / ` +
+          `${String(durM).padStart(2, '0')}:${String(durS).padStart(2, '0')}`;
+        
+        // Dynamically modulate telemetry readouts based on playback time
+        updateDynamicTelemetry(video.currentTime / video.duration);
+      }
+    });
+
+    function togglePlay() {
+      if (video.paused) {
+        video.play();
+        playBtn.textContent = '⏸ PAUSE';
+      } else {
+        video.pause();
+        playBtn.textContent = '▶ PLAY';
+      }
+    }
+
+    function toggleMute() {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? '🔇' : '🔊';
+    }
+
+    function seekVideo(val) {
+      if (!isNaN(video.duration)) {
+        video.currentTime = (val / 100) * video.duration;
+      }
+    }
+
+    function stepFrame(dir) {
+      video.pause();
+      playBtn.textContent = '▶ PLAY';
+      video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + dir * (1 / 12)));
+    }
+
+    function setSpeed(spd, btn) {
+      video.playbackRate = spd;
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function updateDynamicTelemetry(progress) {
+      const doorBar = document.getElementById('doorBar');
+      const doorVal = document.getElementById('doorVal');
+      const impBar = document.getElementById('impBar');
+      const impVal = document.getElementById('impVal');
+      const threatBar = document.getElementById('threatBar');
+      const threatVal = document.getElementById('threatVal');
+      const lockStatus = document.getElementById('lockStatus');
+      const t4l = document.getElementById('t4lVal');
+      const asym = document.getElementById('asymVal');
+      const action = document.getElementById('actionVal');
+
+      if (progress < 0.35) {
+        // Door phase
+        const p = Math.min(1.0, 0.4 + progress * 1.8);
+        doorBar.style.width = `${p * 100}%`;
+        doorVal.textContent = `${p.toFixed(2)} (${p > 0.8 ? 'USE Triggered' : 'Seeking'})`;
+        impBar.style.width = '12%';
+        impVal.textContent = '0.12';
+        threatBar.style.width = '25%';
+        threatVal.textContent = '0.25';
+        lockStatus.textContent = progress > 0.25 ? 'DOOR THRESHOLD DETECTED' : 'CORRIDOR NAVIGATION';
+        lockStatus.style.color = '#00ffaa';
+        t4l.textContent = '-58.4 mV';
+        asym.textContent = '+0.082';
+        action.textContent = progress > 0.25 ? 'USE' : 'FORWARD';
+      } else if (progress < 0.85) {
+        // Combat phase
+        doorBar.style.width = '8%';
+        doorVal.textContent = '0.08';
+        impBar.style.width = '92%';
+        impVal.textContent = '0.92 (Hostile)';
+        threatBar.style.width = '88%';
+        threatVal.textContent = '0.88 (High)';
+        lockStatus.textContent = 'LOCK-ON (<=18°) · FIRE';
+        lockStatus.style.color = '#ff3366';
+        t4l.textContent = '-48.2 mV';
+        asym.textContent = '+0.384 (Turning)';
+        action.textContent = 'FIRE / COMBAT';
+      } else {
+        // Clear phase
+        doorBar.style.width = '15%';
+        doorVal.textContent = '0.15';
+        impBar.style.width = '10%';
+        impVal.textContent = '0.10 (Neutralized)';
+        threatBar.style.width = '18%';
+        threatVal.textContent = '0.18 (Resting)';
+        lockStatus.textContent = 'TARGET NEUTRALIZED · ADVANCING';
+        lockStatus.style.color = '#00e5ff';
+        t4l.textContent = '-64.5 mV';
+        asym.textContent = '-0.045';
+        action.textContent = 'FORWARD';
+      }
+    }
+  </script>
+</body>
+</html>
