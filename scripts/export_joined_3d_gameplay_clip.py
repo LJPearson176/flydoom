@@ -18,6 +18,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import pyarrow.parquet as pq
 
+from fly_doom.sensory.encoders.facet_atlas import CompoundEyeFacetAtlas
+from fly_doom.sensory.encoders.calibrated_retina import EncoderCalibratedRetina, sample_retina
+
 
 def hex_to_rgb(hex_str: str) -> tuple[int, int, int]:
     hex_str = hex_str.lstrip("#")
@@ -33,6 +36,8 @@ def create_joined_frame(
     width: int = 1280,
     height: int = 640,
     pulse_phase: float = 0.0,
+    facet_atlas: Optional[CompoundEyeFacetAtlas] = None,
+    retina_encoder: Optional[EncoderCalibratedRetina] = None,
 ) -> Image.Image:
     half_w = width // 2
     img = Image.new("RGB", (width, height), (5, 10, 14))
@@ -322,6 +327,35 @@ def create_joined_frame(
     draw.text((half_w + 16, 12), "ISOMETRIC 3D VISIBLE FLY NERVOUS SYSTEM", fill=(0, 229, 255))
     draw.text((half_w + 390, 12), "JFRC2 TEMPLATE · 3,030 FLYWIRE FIBERS", fill=(88, 223, 194))
 
+    # Compound-Eye Facet Atlas HUD Inset
+    if facet_atlas is not None:
+        card_w = 224
+        card_h = 104
+        card_x = width - card_w - 16
+        card_y = 48
+        draw.rectangle([card_x, card_y, card_x + card_w, card_y + card_h], fill=(8, 16, 22), outline=(22, 50, 62), width=1)
+        draw.text((card_x + 8, card_y + 5), "COMPOUND EYE ATLAS", fill=(0, 229, 255))
+        draw.text((card_x + card_w - 60, card_y + 5), "825 COLS", fill=(88, 223, 194))
+
+        # Sample from the rendered Doom viewport
+        doom_crop = img.crop((0, 0, half_w, height))
+        doom_rgb = np.array(doom_crop)
+        gray = np.mean(doom_rgb, axis=2).astype(np.float32)
+        if retina_encoder is not None:
+            retina_samples = sample_retina(gray, retina_encoder.calibrated_uv)
+        else:
+            retina_samples = None
+
+        facet_atlas.render_pil(
+            draw,
+            x=card_x + 6,
+            y=card_y + 18,
+            w=card_w - 12,
+            h=card_h - 22,
+            values=retina_samples,
+            mode="copper",
+        )
+
     # Right Panel Bottom Telemetry Cards
     draw.rectangle([half_w + 15, height - 90, width - 15, height - 15], fill=(9, 20, 27), outline=(22, 50, 62), width=1)
     draw.text((half_w + 25, height - 82), f"ASYMMETRY Δ: {asym:+.3f}", fill=(240, 166, 90))
@@ -368,10 +402,21 @@ def export_joined_clip(
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     print("Rendering composite First-Person Doom + Isometric 3D Nervous System frames...")
+    atlas = CompoundEyeFacetAtlas()
+    retina_encoder = EncoderCalibratedRetina()
     frames_pil = []
     for i, row in enumerate(rows):
         pulse_phase = (i * 0.08) % 1.0
-        frame = create_joined_frame(row, model_3d, mesh_data, width=1280, height=640, pulse_phase=pulse_phase)
+        frame = create_joined_frame(
+            row,
+            model_3d,
+            mesh_data,
+            width=1280,
+            height=640,
+            pulse_phase=pulse_phase,
+            facet_atlas=atlas,
+            retina_encoder=retina_encoder,
+        )
         frame.save(tmp_dir / f"frame_{i:04d}.png")
         if output_gif and i < 80:  # first 80 frames for GIF to keep size compact
             frames_pil.append(frame.resize((640, 320), Image.Resampling.BILINEAR))
