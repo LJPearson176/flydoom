@@ -457,6 +457,10 @@ class DoorSeekingController:
         enemy2_pos: Tuple[float, float] = (1920.0, -2176.0),
         panic_health: float = 35.0,
         threat_refractory_ticks: int = 1,
+        reservoir: Optional[Any] = None,
+        door_decoder: Optional[Any] = None,
+        enemy_decoder: Optional[Any] = None,
+        threat_decoder: Optional[Any] = None,
     ):
         self.base = base
         self.name = f"{base.name}_DoorSeeking"
@@ -469,6 +473,10 @@ class DoorSeekingController:
         self.enemy2_pos = enemy2_pos
         self.panic_health = float(panic_health)
         self.threat_refractory_ticks = int(threat_refractory_ticks)
+        self.reservoir = reservoir
+        self.door_decoder = door_decoder
+        self.enemy_decoder = enemy_decoder
+        self.threat_decoder = threat_decoder
         self._stalled_ticks = 0
         self._use_cooldown = 0
         self._last_position: Optional[Tuple[float, float]] = None
@@ -519,6 +527,26 @@ class DoorSeekingController:
             self._stalled_ticks = self._stalled_ticks + 1 if displacement < 1.0 else 0
         else:
             self._stalled_ticks = 0
+
+        # Query Connectome-Constrained Reservoir decoders if attached
+        reservoir_state: Dict[str, float] = {}
+        if self.reservoir is not None and getattr(obs, "rgb", None) is not None:
+            try:
+                res_feat = self.reservoir.encode_frame(obs.rgb)
+                if self.door_decoder is not None:
+                    d_pred = self.door_decoder.predict(res_feat)
+                    reservoir_state["reservoir_door_prob"] = float(d_pred.probability)
+                    reservoir_state["reservoir_door_use"] = 1.0 if d_pred.should_use else 0.0
+                if self.enemy_decoder is not None:
+                    e_pred = self.enemy_decoder.predict(res_feat)
+                    reservoir_state["reservoir_enemy_class"] = float(e_pred.class_id)
+                    reservoir_state["reservoir_enemy_conf"] = float(e_pred.confidence)
+                if self.threat_decoder is not None:
+                    t_pred = self.threat_decoder.predict(res_feat)
+                    reservoir_state["reservoir_threat_arousal"] = float(t_pred.arousal)
+                    reservoir_state["reservoir_should_fire"] = 1.0 if t_pred.should_fire else 0.0
+            except Exception:
+                pass
 
         target_angle: Optional[float] = None
         perspective_action: Optional[DoomAction] = None
@@ -794,6 +822,7 @@ class DoorSeekingController:
         self._last_action = action
         self._last_health = float(obs.health)
         self.last_neural_state = dict(self.base.get_neural_state())
+        self.last_neural_state.update(reservoir_state)
         self.last_neural_state.update({
             "door_candidate": 1.0 if candidate else 0.0,
             "door_stalled_ticks": float(self._stalled_ticks),
