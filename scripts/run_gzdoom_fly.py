@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from pathlib import Path
 import sys
 
 # Ensure src/ is on sys.path regardless of execution environment
@@ -40,8 +39,25 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    target = GZDoomTarget(map_name=args.map, iwad=Path(args.iwad) if args.iwad else None)
-    bridge = MacOSGZDoomBridge(target=target)
+    iwad_path = Path(args.iwad) if args.iwad else None
+    if iwad_path is None:
+        inst_wad = Path("runs/doom004_lesions_v1/DOOM1_INSTRUMENTED.WAD")
+        if inst_wad.exists():
+            iwad_path = inst_wad
+        else:
+            wads_wad = Path("wads/DOOM1.WAD")
+            if wads_wad.exists():
+                iwad_path = wads_wad
+
+    log_path = Path("runs/live_gzdoom_fly.log")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    target = GZDoomTarget(
+        map_name=args.map,
+        iwad=iwad_path,
+        telemetry_logfile=log_path,
+    )
+    bridge = MacOSGZDoomBridge(target=target, resolution=(64, 64))
     base = ControlledT4Controller(width=64, height=64, saccade_refractory_ticks=args.refractory_ticks)
     controller = DoorSeekingController(base) if args.door_seeking else base
 
