@@ -105,3 +105,20 @@ def test_retinotopic_t4_array_execution_speed():
     elapsed_ms = (t1 - t0) * 1000.0
     ms_per_frame = elapsed_ms / n_frames
     assert ms_per_frame < 2.0, f"Array step too slow: {ms_per_frame:.3f} ms/frame (budget: < 2.0 ms)"
+
+
+def test_retinotopic_t4_variance_stabilization():
+    """Verify that Anscombe square-root transform compresses high-magnitude spike bursts."""
+    params = CompartmentalParameters(dt=16.67)
+    engine_raw = RetinotopicT4ArrayEngine(rows=4, cols=4, params=params, stabilize_variance=False)
+    engine_stab = RetinotopicT4ArrayEngine(rows=4, cols=4, params=params, stabilize_variance=True)
+
+    # Inject extreme luminance burst (e.g. muzzle flash / explosion)
+    flash_frame = np.full((4, 4), 100.0, dtype=np.float64)
+    u_raw, v_raw, _ = engine_raw.step(flash_frame)
+    u_stab, v_stab, _ = engine_stab.step(flash_frame)
+
+    # Stabilized flow field should preserve sign/direction but have compressed magnitude
+    assert np.all(np.abs(u_stab) <= np.abs(u_raw) + 1e-6)
+    assert np.all(np.abs(v_stab) <= np.abs(v_raw) + 1e-6)
+

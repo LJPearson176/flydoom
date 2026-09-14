@@ -456,7 +456,7 @@ class DoorSeekingController:
         enemy1_pos: Tuple[float, float] = (1696.0, -2688.0),
         enemy2_pos: Tuple[float, float] = (1920.0, -2176.0),
         panic_health: float = 35.0,
-        threat_refractory_ticks: int = 4,
+        threat_refractory_ticks: int = 1,
     ):
         self.base = base
         self.name = f"{base.name}_DoorSeeking"
@@ -480,6 +480,9 @@ class DoorSeekingController:
         self.ammc_reflex = AMMCWallSlipReflex(stall_ticks=self.stall_ticks)
         self.waypoint_graph = Stage1WaypointGraph()
         self.last_neural_state: Dict[str, float] = {}
+        self._platform_snipe_burst: Dict[int, int] = {}
+        self._combat_burst: int = 0
+        self._last_enemy_target_id: int = 0
 
     @staticmethod
     def _position_and_angle(obs: DoomObservation) -> Tuple[Optional[Tuple[float, float]], Optional[float]]:
@@ -554,22 +557,75 @@ class DoorSeekingController:
                 state_dict = obs.info.get("native_game_state") if obs.info else None
                 tgt_x = state_dict.get("target_x") if isinstance(state_dict, dict) else None
                 tgt_y = state_dict.get("target_y") if isinstance(state_dict, dict) else None
+                tgt_z = state_dict.get("target_z") if isinstance(state_dict, dict) else None
                 tgt_hp = state_dict.get("target_health") if isinstance(state_dict, dict) else None
                 tgt_vis = bool(state_dict.get("target_visible", False)) if isinstance(state_dict, dict) and state_dict.get("target_visible") is not None else False
 
                 has_live_target = False
-                if tgt_x is not None and tgt_y is not None and (tgt_hp is None or tgt_hp > 0) and tgt_vis:
+                tgt_dist = (
+                    math.hypot(float(tgt_x) - curr_x, float(tgt_y) - curr_y)
+                    if tgt_x is not None and tgt_y is not None and curr_x is not None and curr_y is not None
+                    else None
+                )
+                max_engage_dist = (
+                    620.0
+                    if (curr_x is not None and curr_x < 2200.0 and curr_y is not None and curr_y > -2700.0)
+                    else 380.0
+                )
+                on_bridge = curr_y is not None and (-3650.0 < curr_y < -3050.0)
+                is_off_bridge_threat = on_bridge and tgt_z is not None and float(tgt_z) > 50.0
+                if (
+                    tgt_x is not None
+                    and tgt_y is not None
+                    and (tgt_hp is None or tgt_hp > 0)
+                    and tgt_vis
+                    and not is_off_bridge_threat
+                    and (tgt_dist is None or tgt_dist <= max_engage_dist)
+                ):
                     target_enemy = (float(tgt_x), float(tgt_y))
                     enemy_target_id = 100
                     has_live_target = True
-                elif obs.kill_count < 1:
+                elif obs.kill_count < 1 and curr_x < 1820.0:
                     target_enemy = self.enemy1_pos
                     enemy_target_id = 1
                     has_live_target = True
-                elif obs.kill_count < 2:
+                elif obs.kill_count < 2 and curr_x < 1820.0:
                     target_enemy = self.enemy2_pos
                     enemy_target_id = 2
                     has_live_target = True
+                elif obs.kill_count < 3 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                    cnt = self._platform_snipe_burst.get(3, 0)
+                    if cnt < 2 and obs.ammo > 10:
+                        target_enemy = (2272.0, -2512.0)
+                        enemy_target_id = 3
+                        has_live_target = True
+                        self._platform_snipe_burst[3] = cnt + 1
+                    else:
+                        target_enemy = (2100.0, -2672.0)
+                        enemy_target_id = 200
+                elif obs.kill_count < 4 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                    cnt = self._platform_snipe_burst.get(4, 0)
+                    if cnt < 2 and obs.ammo > 10:
+                        target_enemy = (2272.0, -2432.0)
+                        enemy_target_id = 4
+                        has_live_target = True
+                        self._platform_snipe_burst[4] = cnt + 1
+                    else:
+                        target_enemy = (2100.0, -2672.0)
+                        enemy_target_id = 200
+                elif obs.kill_count < 5 and 1820.0 <= curr_x <= 1950.0 and curr_y > -2580.0:
+                    cnt = self._platform_snipe_burst.get(5, 0)
+                    if cnt < 2 and obs.ammo > 10:
+                        target_enemy = (2272.0, -2352.0)
+                        enemy_target_id = 5
+                        has_live_target = True
+                        self._platform_snipe_burst[5] = cnt + 1
+                    else:
+                        target_enemy = (2100.0, -2672.0)
+                        enemy_target_id = 200
+                elif curr_x < 1820.0:
+                    target_enemy = (1850.0, -2496.0)
+                    enemy_target_id = 150
                 elif curr_x < 2100.0:
                     target_enemy = (2100.0, -2672.0)
                     enemy_target_id = 200
@@ -579,9 +635,20 @@ class DoorSeekingController:
                 elif curr_x < 2650.0:
                     target_enemy = (2800.0, -2800.0)
                     enemy_target_id = 300
-                elif curr_y > -3550.0:
-                    target_enemy = (3100.0, -3600.0)
+                elif curr_y > -3650.0:
                     enemy_target_id = 400
+                    if curr_x < 2800.0:
+                        target_enemy = (3100.0, -3600.0)
+                    elif curr_y > -3000.0:
+                        target_enemy = (3000.0, -3050.0)
+                    elif curr_y > -3180.0 and curr_x > 2920.0:
+                        target_enemy = (2900.0, -3200.0)
+                    elif curr_x < 3080.0 and curr_y > -3310.0:
+                        target_enemy = (3100.0, -3320.0)
+                    elif curr_y > -3530.0:
+                        target_enemy = (3024.0, -3544.0)
+                    else:
+                        target_enemy = (3008.0, -3650.0)
                 elif curr_y > -4030.0:
                     target_enemy = (3008.0, -4000.0)
                     enemy_target_id = 500
@@ -596,6 +663,10 @@ class DoorSeekingController:
                 dy = target_enemy[1] - curr_y
                 target_angle = math.degrees(math.atan2(dy, dx))
                 deadband = 12.0
+
+            if enemy_target_id != self._last_enemy_target_id:
+                self._combat_burst = 0
+                self._last_enemy_target_id = enemy_target_id
 
             diff = (target_angle - angle_deg + 180.0) % 360.0 - 180.0
             if diff > deadband:
@@ -614,14 +685,7 @@ class DoorSeekingController:
                 if health_drop and self._threat_ticks == 0:
                     self._threat_ticks = self.threat_refractory_ticks
                 if self._threat_ticks > 0:
-                    evade_angle = (target_angle + 180.0) % 360.0
-                    evade_diff = (evade_angle - angle_deg + 180.0) % 360.0 - 180.0
-                    if evade_diff > deadband:
-                        threat_action = DoomAction.TURN_LEFT
-                    elif evade_diff < -deadband:
-                        threat_action = DoomAction.TURN_RIGHT
-                    else:
-                        threat_action = DoomAction.FORWARD
+                    threat_action = perspective_action if perspective_action is not None else DoomAction.FORWARD
 
         # Biological Fan-Shaped Body (FB) Vector Navigation
         fb_steer = 0.0
@@ -640,7 +704,8 @@ class DoorSeekingController:
 
         # Biological Subesophageal Zone (SEZ) Ventral Nukage Hazard Reflex
         acid_detected, acid_bias, acid_frac = self.sez_reflex.evaluate_retinal_hazard(obs.rgb)
-        if acid_detected and in_enemy_arena and threat_action is None and combat_action is None:
+        on_bridge = curr_y is not None and (-3650.0 < curr_y < -3050.0)
+        if acid_detected and in_enemy_arena and not on_bridge and threat_action is None and combat_action is None:
             threat_action = DoomAction.TURN_LEFT if acid_bias > 0 else DoomAction.TURN_RIGHT
 
         base_action = self.base.select_action(obs)
@@ -670,7 +735,7 @@ class DoorSeekingController:
             curr_x is not None
             and curr_y is not None
             and (
-                (curr_x >= 2950.0 and -3650.0 <= curr_y <= -3450.0)
+                (curr_x >= 2950.0 and -3650.0 <= curr_y <= -3450.0 and self._stalled_ticks >= 2)
                 or (curr_x <= 2960.0 and curr_y <= -4650.0)
             )
         )
@@ -699,11 +764,18 @@ class DoorSeekingController:
             elif threat_action is not None:
                 action = threat_action
             elif combat_action is not None:
-                action = combat_action
+                if self._combat_burst >= 2:
+                    self._combat_burst = 0
+                    action = perspective_action if perspective_action is not None else DoomAction.FORWARD
+                else:
+                    self._combat_burst += 1
+                    action = combat_action
             elif perspective_action is not None:
+                self._combat_burst = 0
                 action = perspective_action
             else:
-                action = base_action
+                self._combat_burst = 0
+                action = DoomAction.FORWARD
         elif perspective_action is not None:
             action = perspective_action
 

@@ -126,11 +126,14 @@ class SEZNociceptiveReflex:
         self,
         acid_threshold: float = 1.35,
         ventral_rows_ratio: float = 0.25,
+        use_calibrated_retina: bool = True,
     ) -> None:
         self.acid_threshold = acid_threshold
         self.ventral_rows_ratio = ventral_rows_ratio
+        self.use_calibrated_retina = use_calibrated_retina
         self.last_acid_detected: bool = False
         self.last_repulsive_bias: float = 0.0
+        self._calibrated_encoder = None
 
     def evaluate_retinal_hazard(
         self, rgb_frame: np.ndarray
@@ -148,6 +151,20 @@ class SEZNociceptiveReflex:
         """
         if rgb_frame is None or rgb_frame.ndim != 3:
             return False, 0.0, 0.0
+
+        if self.use_calibrated_retina:
+            try:
+                if self._calibrated_encoder is None:
+                    from fly_doom.sensory.encoders.calibrated_retina import EncoderCalibratedRetina
+                    self._calibrated_encoder = EncoderCalibratedRetina()
+                acid_det, rep_yaw, acid_int = self._calibrated_encoder.evaluate_nukage_hazard(
+                    rgb_frame, acid_threshold=self.acid_threshold
+                )
+                self.last_acid_detected = acid_det
+                self.last_repulsive_bias = rep_yaw
+                return acid_det, rep_yaw, acid_int
+            except Exception:
+                pass
 
         h, w, _ = rgb_frame.shape
         start_row = int(h * (1.0 - self.ventral_rows_ratio))

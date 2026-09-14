@@ -408,6 +408,14 @@ def run_actual_gameplay_recording(
             shutil.copy(output_gif, art_gif)
             print(f"Copied to artifact: {art_gif}")
 
+    # Copy to repository assets directory
+    assets_dir = Path("assets")
+    if assets_dir.exists():
+        shutil.copy(output_mp4, assets_dir / "actual_gameplay_3d_twin.mp4")
+        if output_gif.exists():
+            shutil.copy(output_gif, assets_dir / "actual_gameplay_3d_twin.gif")
+        print(f"Copied recordings to {assets_dir}/")
+
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
 

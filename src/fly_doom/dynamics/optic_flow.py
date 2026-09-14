@@ -47,10 +47,12 @@ class RetinotopicT4ArrayEngine:
         rows: int = 8,
         cols: int = 8,
         params: Optional[CompartmentalParameters] = None,
+        stabilize_variance: bool = False,
     ):
         self.rows = rows
         self.cols = cols
         self.params = params or CompartmentalParameters()
+        self.stabilize_variance = stabilize_variance
         p = self.params
 
         # 4 directional subtypes: 'a' (+x), 'b' (-x), 'c' (+y), 'd' (-y)
@@ -248,6 +250,8 @@ class RetinotopicT4ArrayEngine:
         # u(r, c) = T4a (right) - T4b (left)
         # v(r, c) = T4c (up) - T4d (down)
         depol = np.maximum(0.0, self.v_soma - p.v_rest) + (15.0 * spikes)
+        if self.stabilize_variance:
+            depol = np.sqrt(depol)
         u_field = depol[0] - depol[1]  # T4a - T4b
         v_field = depol[2] - depol[3]  # T4c - T4d
 

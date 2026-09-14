@@ -297,3 +297,34 @@ def test_authentic_switch_line_330():
     assert controller.get_neural_state()["at_exit_switch"] == 1.0
 
 
+def test_zone5_platform_sniping_targets():
+    base = ControlledT4Controller(model_type=CompartmentModelType.MODEL_A)
+    controller = DoorSeekingController(base, manage_perspective=True)
+
+    # Position at catwalk entry (1850, -2496) with kill_count = 2 (perched enemies eliminated)
+    # Target 3: Platform Shotgun Guy at (2272, -2512), angle ~ -2.17 deg
+    obs_k2 = _make_obs(x=1850.0, y=-2496.0, angle_deg=-2.0, kill_count=2, ammo=40)
+    act_k2 = controller.select_action(obs_k2)
+    assert act_k2 == DoomAction.FIRE
+    state_k2 = controller.get_neural_state()
+    assert state_k2["enemy_target_id"] == 3.0
+    assert state_k2["target_angle_deg"] == pytest.approx(-2.17, abs=0.5)
+
+    # Target 4: Platform Zombieman at (2272, -2432), angle ~ +8.62 deg
+    obs_k3 = _make_obs(x=1850.0, y=-2496.0, angle_deg=8.5, kill_count=3, ammo=38)
+    act_k3 = controller.select_action(obs_k3)
+    assert act_k3 == DoomAction.FIRE
+    state_k3 = controller.get_neural_state()
+    assert state_k3["enemy_target_id"] == 4.0
+    assert state_k3["target_angle_deg"] == pytest.approx(8.62, abs=0.5)
+
+    # Target 5: Platform Zombieman at (2272, -2352), angle ~ +18.84 deg
+    obs_k4 = _make_obs(x=1850.0, y=-2496.0, angle_deg=18.5, kill_count=4, ammo=36)
+    act_k4 = controller.select_action(obs_k4)
+    assert act_k4 == DoomAction.FIRE
+    state_k4 = controller.get_neural_state()
+    assert state_k4["enemy_target_id"] == 5.0
+    assert state_k4["target_angle_deg"] == pytest.approx(18.84, abs=0.5)
+
+
+
