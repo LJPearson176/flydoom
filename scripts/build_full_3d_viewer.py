@@ -29,10 +29,10 @@ def main():
     with open(mesh_path) as f:
         mesh_data = json.load(f)
 
-    from fly_doom.dynamics.fan_shaped_body import Stage1WaypointGraph
+    from fly_doom.dynamics.fan_shaped_body import Stage1WaypointGraph, Stage2WaypointGraph
     from fly_doom.sensory.encoders.facet_atlas import CompoundEyeFacetAtlas
 
-    wp_graph = Stage1WaypointGraph()
+    wp_graph1 = Stage1WaypointGraph()
     stage1_waypoints = [
         {
             "zone_id": wp.zone_id,
@@ -43,7 +43,21 @@ def main():
             "action": wp.required_action,
             "desc": wp.description,
         }
-        for wp in wp_graph.waypoints
+        for wp in wp_graph1.waypoints
+    ]
+
+    wp_graph2 = Stage2WaypointGraph()
+    stage2_waypoints = [
+        {
+            "zone_id": wp.zone_id,
+            "name": wp.name,
+            "pos": list(wp.target_pos),
+            "radius": wp.radius,
+            "heading_deg": wp.target_heading_deg,
+            "action": wp.required_action,
+            "desc": wp.description,
+        }
+        for wp in wp_graph2.waypoints
     ]
 
     retinal_atlas = CompoundEyeFacetAtlas()
@@ -57,6 +71,7 @@ def main():
         "neuropil_meshes": mesh_data["neuropils"],
         "high_fidelity_pathways": model_3d.get("high_fidelity_pathways"),
         "stage1_waypoints": stage1_waypoints,
+        "stage2_waypoints": stage2_waypoints,
         "retinal_atlas": retinal_atlas.to_dict(),
     }
     payload_json = json.dumps(payload)
@@ -739,9 +754,20 @@ def main():
           <span>128 Retinotopic Cartridge Columns</span>
           <input type="checkbox" id="chkCartridges" onchange="state.showCartridges = this.checked">
         </div>
+        <div class="slider-row" style="margin-top:6px; margin-bottom:4px;">
+          <label><span>TACTICAL STAGE WAYPOINTS</span></label>
+          <div style="display:flex; gap:6px;">
+            <button class="btn active" id="btnStage1" style="flex:1; font-size:10px; padding:4px 2px;" onclick="setWaypointStage(1)">E1M1: HANGAR</button>
+            <button class="btn" id="btnStage2" style="flex:1; font-size:10px; padding:4px 2px;" onclick="setWaypointStage(2)">E1M2: NUCLEAR</button>
+          </div>
+        </div>
         <div class="layer-row">
-          <span>Stage 1 Waypoint Trajectory (7 Zones)</span>
+          <span>Show Waypoint Trajectory (7 Zones)</span>
           <input type="checkbox" id="chkWaypoints" checked onchange="state.showWaypoints = this.checked">
+        </div>
+        <div class="layer-row">
+          <span>Mushroom Body Valence HUD</span>
+          <input type="checkbox" id="chkValenceHUD" checked onchange="state.showValenceHUD = this.checked">
         </div>
         <div class="layer-row">
           <span>SWC Morphology Skeletons (14 Neurons)</span>
@@ -951,8 +977,10 @@ def main():
 
       // High-Fidelity Multi-Scale Granularity
       granularity: 1,
+      activeStage: 1,
       showCartridges: false,
       showWaypoints: true,
+      showValenceHUD: true,
       showSWC: true,
       showSynapses: true,
       synapseFilter: "all",
@@ -1197,6 +1225,32 @@ def main():
       updateReadout();
     }}, {{ passive: false }});
     canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+    function setWaypointStage(stage) {{
+      state.activeStage = stage;
+      const b1 = document.getElementById("btnStage1");
+      const b2 = document.getElementById("btnStage2");
+      if (b1) b1.classList.toggle("active", stage === 1);
+      if (b2) b2.classList.toggle("active", stage === 2);
+    }}
+
+    canvas.addEventListener("click", e => {{
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const w = canvas.width / window.devicePixelRatio;
+      const boxW = 220;
+      const boxX = w - boxW - 20;
+      const boxY = 65;
+
+      if (clickY >= boxY + 4 && clickY <= boxY + 22) {{
+        if (clickX >= boxX + 130 && clickX <= boxX + 170) {{
+          setWaypointStage(1);
+        }} else if (clickX >= boxX + 172 && clickX <= boxX + 215) {{
+          setWaypointStage(2);
+        }}
+      }}
+    }});
 
     function setGranularity(level) {{
       state.granularity = level;
@@ -2210,6 +2264,11 @@ def main():
       let isFire = false;
       let isDoor = false;
       let isDamage = false;
+      let mbValence = 0.35;
+      let mbPPL1 = 0.0;
+      let mbPAM = 0.0;
+      let mbApp = 1.0;
+      let mbAv = 0.65;
 
       if (state.currentEpisode === "live" && state.liveTick) {{
         const t = state.liveTick;
@@ -2217,6 +2276,11 @@ def main():
         isFire = (t.action === "FIRE" || t.firing_solution_locked === 1.0);
         isDoor = (t.action === "USE" || t.door_candidate === 1.0);
         isDamage = (t.health_priority_active === 1.0);
+        mbValence = (t.mb_valence !== undefined) ? t.mb_valence : (isDamage ? -0.55 : 0.35);
+        mbPPL1 = (t.mb_ppl1_da !== undefined) ? t.mb_ppl1_da : (isDamage ? 1.0 : 0.0);
+        mbPAM = (t.mb_pam_da !== undefined) ? t.mb_pam_da : (isFire ? 0.8 : 0.0);
+        mbApp = (t.mb_mbon_app !== undefined) ? t.mb_mbon_app : 1.0;
+        mbAv = (t.mb_mbon_av !== undefined) ? t.mb_mbon_av : (isDamage ? 1.55 : 0.65);
       }} else {{
         const ep = DATA.episodes[state.currentEpisode];
         if (ep && ep.ticks[state.step]) {{
@@ -2225,6 +2289,11 @@ def main():
           isFire = (t.action === "FIRE" || t.firing_solution_locked === 1.0);
           isDoor = (t.action === "USE" || t.door_candidate === 1.0);
           isDamage = (t.health_priority_active === 1.0);
+          mbValence = (t.mb_valence !== undefined) ? t.mb_valence : (isDamage ? -0.55 : 0.35);
+          mbPPL1 = (t.mb_ppl1_da !== undefined) ? t.mb_ppl1_da : (isDamage ? 1.0 : 0.0);
+          mbPAM = (t.mb_pam_da !== undefined) ? t.mb_pam_da : (isFire ? 0.8 : 0.0);
+          mbApp = (t.mb_mbon_app !== undefined) ? t.mb_mbon_app : 1.0;
+          mbAv = (t.mb_mbon_av !== undefined) ? t.mb_mbon_av : (isDamage ? 1.55 : 0.65);
         }}
       }}
 
@@ -2233,9 +2302,9 @@ def main():
         const decay = Math.max(0, state.stimTimer);
         if (state.stimType === "turn_right") asym = 0.9 * decay;
         else if (state.stimType === "turn_left") asym = -0.9 * decay;
-        else if (state.stimType === "fire") isFire = true;
+        else if (state.stimType === "fire") {{ isFire = true; mbPAM = 1.0 * decay; mbValence = 0.8 * decay; }}
         else if (state.stimType === "door") isDoor = true;
-        else if (state.stimType === "panic") isDamage = true;
+        else if (state.stimType === "panic") {{ isDamage = true; mbPPL1 = 1.0 * decay; mbValence = -0.9 * decay; }}
       }}
 
       drawCompoundEyeAtlas(asym, isFire, isDoor, isDamage);
@@ -2645,75 +2714,202 @@ def main():
         drawEmbodiedFlyWithShotgun(ctx, w, h, asym, isFire, isDoor, isDamage);
       }}
 
-      // 11. Stage 1 Waypoint Trajectory Inset HUD (E1M1 Spawn to Exit)
-      if (state.showWaypoints && DATA.stage1_waypoints && DATA.stage1_waypoints.length > 0) {{
-        const wps = DATA.stage1_waypoints;
-        const boxW = 210;
-        const boxH = 135;
-        const boxX = w - boxW - 20;
-        const boxY = 65;
+      // 11. Tactical Stage Waypoint Trajectory Inset HUD (E1M1 Hangar vs E1M2 Nuclear Plant)
+      if (state.showWaypoints) {{
+        const isStage2 = (state.activeStage === 2 && DATA.stage2_waypoints && DATA.stage2_waypoints.length > 0);
+        const wps = isStage2 ? DATA.stage2_waypoints : (DATA.stage1_waypoints || []);
+        if (wps.length > 0) {{
+          const boxW = 220;
+          const boxH = 142;
+          const boxX = w - boxW - 20;
+          const boxY = 65;
+
+          // Background card
+          ctx.fillStyle = "rgba(9, 20, 27, 0.92)";
+          ctx.strokeStyle = isStage2 ? "rgba(0, 255, 170, 0.55)" : "rgba(0, 229, 255, 0.55)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+          ctx.fill();
+          ctx.stroke();
+
+          // Card header title
+          ctx.fillStyle = isStage2 ? "#00ffaa" : "#00e5ff";
+          ctx.font = "bold 8.5px monospace";
+          ctx.fillText(isStage2 ? "STAGE 2 TOPOLOGICAL WAYPOINTS" : "STAGE 1 TOPOLOGICAL WAYPOINTS", boxX + 10, boxY + 16);
+
+          // E1M1 chip
+          ctx.fillStyle = !isStage2 ? "rgba(0, 229, 255, 0.25)" : "rgba(255, 255, 255, 0.05)";
+          ctx.strokeStyle = !isStage2 ? "#00e5ff" : "rgba(255, 255, 255, 0.2)";
+          ctx.beginPath();
+          ctx.roundRect(boxX + 132, boxY + 6, 38, 14, 3);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = !isStage2 ? "#00e5ff" : "#94a3b8";
+          ctx.font = "bold 7.5px monospace";
+          ctx.fillText("E1M1", boxX + 140, boxY + 16);
+
+          // E1M2 chip
+          ctx.fillStyle = isStage2 ? "rgba(0, 255, 170, 0.25)" : "rgba(255, 255, 255, 0.05)";
+          ctx.strokeStyle = isStage2 ? "#00ffaa" : "rgba(255, 255, 255, 0.2)";
+          ctx.beginPath();
+          ctx.roundRect(boxX + 174, boxY + 6, 38, 14, 3);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = isStage2 ? "#00ffaa" : "#94a3b8";
+          ctx.font = "bold 7.5px monospace";
+          ctx.fillText("E1M2", boxX + 182, boxY + 16);
+
+          // Stage coordinate ranges
+          const minX = isStage2 ? -650 : 950;
+          const maxX = isStage2 ? 1750 : 3250;
+          const minY = isStage2 ? -100 : -3750;
+          const maxY = isStage2 ? 2850 : -2300;
+
+          function mapToBox(wx, wy) {{
+            const nx = (wx - minX) / (maxX - minX);
+            const ny = 1.0 - (wy - minY) / (maxY - minY);
+            return {{
+              x: boxX + 15 + nx * (boxW - 30),
+              y: boxY + 28 + ny * (boxH - 52)
+            }};
+          }}
+
+          // Path dashed line
+          ctx.strokeStyle = isStage2 ? "rgba(0, 255, 170, 0.45)" : "rgba(0, 229, 255, 0.45)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          for (let i = 0; i < wps.length; i++) {{
+            const pt = mapToBox(wps[i].pos[0], wps[i].pos[1]);
+            if (i === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }}
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Waypoint nodes
+          for (let i = 0; i < wps.length; i++) {{
+            const wp = wps[i];
+            const pt = mapToBox(wp.pos[0], wp.pos[1]);
+            const isExit = (wp.action === "EXIT_SWITCH");
+            const isDoor = (wp.action === "USE_DOOR");
+            const isCombat = (wp.action === "COMBAT");
+
+            ctx.fillStyle = isExit ? "#00ffaa" : (isDoor ? "#ff9800" : (isCombat ? "#ff3366" : "#00e5ff"));
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, isExit ? 4.5 : 3.0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.fillStyle = "rgba(203, 213, 225, 0.90)";
+            ctx.font = "8px monospace";
+            ctx.fillText(`Z${{wp.zone_id}}`, pt.x + 5, pt.y + 3);
+          }}
+
+          // Bottom milestone banner
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "7.5px monospace";
+          ctx.fillText(
+            isStage2
+              ? "SPAWN → OVERLOOK → AIRLOCK → REACTOR → EXIT"
+              : "SPAWN → CATWALK → STAIRS → EXIT",
+            boxX + 10,
+            boxY + boxH - 6
+          );
+        }}
+      }}
+
+      // 12. Mushroom Body Dopaminergic Plasticity & Valence HUD
+      if (state.showValenceHUD) {{
+        const mbW = 220;
+        const mbH = 76;
+        const mbX = w - mbW - 20;
+        const mbY = (state.showWaypoints ? 65 + 150 : 65);
 
         // Background card
-        ctx.fillStyle = "rgba(9, 20, 27, 0.90)";
-        ctx.strokeStyle = "rgba(0, 229, 255, 0.45)";
+        ctx.fillStyle = "rgba(9, 20, 27, 0.92)";
+        ctx.strokeStyle = (mbPPL1 > 0.05) ? "rgba(255, 51, 102, 0.7)" : ((mbPAM > 0.05) ? "rgba(0, 255, 170, 0.7)" : "rgba(192, 132, 252, 0.45)");
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+        ctx.roundRect(mbX, mbY, mbW, mbH, 6);
         ctx.fill();
         ctx.stroke();
 
-        // Card header
-        ctx.fillStyle = "#00e5ff";
-        ctx.font = "bold 9px monospace";
-        ctx.fillText("STAGE 1 TOPOLOGICAL WAYPOINTS", boxX + 10, boxY + 16);
+        // Header
+        ctx.fillStyle = "#c084fc";
+        ctx.font = "bold 8.5px monospace";
+        ctx.fillText("MUSHROOM BODY VALENCE (V_MB)", mbX + 10, mbY + 15);
 
-        // Normalize coordinates into HUD box (E1M1 coordinates: X: 950..3200, Y: -3700..-2300)
-        const minX = 950, maxX = 3250;
-        const minY = -3750, maxY = -2300;
-
-        function mapToBox(wx, wy) {{
-          const nx = (wx - minX) / (maxX - minX);
-          const ny = 1.0 - (wy - minY) / (maxY - minY);
-          return {{
-            x: boxX + 15 + nx * (boxW - 30),
-            y: boxY + 28 + ny * (boxH - 46)
-          }};
-        }}
-
-        // Path dashed line
-        ctx.strokeStyle = "rgba(0, 229, 255, 0.4)";
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        for (let i = 0; i < wps.length; i++) {{
-          const pt = mapToBox(wps[i].pos[0], wps[i].pos[1]);
-          if (i === 0) ctx.moveTo(pt.x, pt.y);
-          else ctx.lineTo(pt.x, pt.y);
-        }}
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Waypoint nodes
-        for (let i = 0; i < wps.length; i++) {{
-          const wp = wps[i];
-          const pt = mapToBox(wp.pos[0], wp.pos[1]);
-          const isExit = (wp.action === "EXIT_SWITCH");
-          const isDoor = (wp.action === "USE_DOOR");
-
-          ctx.fillStyle = isExit ? "#00ffaa" : (isDoor ? "#ff9800" : "#00e5ff");
+        // Dopamine Burst Badges
+        if (mbPPL1 > 0.05) {{
+          ctx.fillStyle = "rgba(255, 51, 102, 0.25)";
+          ctx.strokeStyle = "#ff3366";
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, isExit ? 4.5 : 3.0, 0, 2 * Math.PI);
+          ctx.roundRect(mbX + mbW - 74, mbY + 5, 66, 12, 3);
           ctx.fill();
-
-          ctx.fillStyle = "rgba(203, 213, 225, 0.85)";
-          ctx.font = "8px monospace";
-          ctx.fillText(`Z${{wp.zone_id}}`, pt.x + 5, pt.y + 3);
+          ctx.stroke();
+          ctx.fillStyle = "#ff3366";
+          ctx.font = "bold 7px monospace";
+          ctx.fillText("PPL1 PAIN DA", mbX + mbW - 70, mbY + 14);
+        }} else if (mbPAM > 0.05) {{
+          ctx.fillStyle = "rgba(0, 255, 170, 0.25)";
+          ctx.strokeStyle = "#00ffaa";
+          ctx.beginPath();
+          ctx.roundRect(mbX + mbW - 74, mbY + 5, 66, 12, 3);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#00ffaa";
+          ctx.font = "bold 7px monospace";
+          ctx.fillText("PAM KILL DA", mbX + mbW - 69, mbY + 14);
         }}
 
-        // Bottom milestone banner
+        // Horizontal Bipolar Valence Bar [-1.0 .. 0.0 .. +1.0]
+        const barX = mbX + 12;
+        const barY = mbY + 25;
+        const barW = mbW - 24;
+        const barH = 10;
+        const midX = barX + barW / 2;
+
+        // Background track
+        ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+        ctx.fillRect(barX, barY, barW, barH);
+
+        // Center line
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(midX, barY - 2);
+        ctx.lineTo(midX, barY + barH + 2);
+        ctx.stroke();
+
+        // Valence fill: left (red/avoidance) or right (cyan/approach)
+        const vClamped = Math.max(-1.0, Math.min(1.0, mbValence));
+        const fillW = Math.abs(vClamped) * (barW / 2);
+        if (vClamped >= 0) {{
+          ctx.fillStyle = "#00e5ff";
+          ctx.fillRect(midX, barY, fillW, barH);
+        }} else {{
+          ctx.fillStyle = "#ff3366";
+          ctx.fillRect(midX - fillW, barY, fillW, barH);
+        }}
+
+        // Sub-bar labels: AVOID vs APPROACH
+        ctx.font = "7px monospace";
+        ctx.fillStyle = "#ff5588";
+        ctx.fillText("AVOID (-1)", barX, barY + barH + 11);
+        ctx.fillStyle = "#00e5ff";
+        ctx.fillText("(+1) APPROACH", barX + barW - 55, barY + barH + 11);
+
+        // Valence numerical readout
+        ctx.fillStyle = (vClamped >= 0) ? "#00e5ff" : "#ff3366";
+        ctx.font = "bold 8px monospace";
+        const vSign = (vClamped > 0) ? "+" : "";
+        ctx.fillText(`V: ${{vSign}}${{vClamped.toFixed(2)}}`, midX - 16, barY + barH + 11);
+
+        // MBON drives
         ctx.fillStyle = "#94a3b8";
-        ctx.font = "8px monospace";
-        ctx.fillText("SPAWN → CATWALK → STAIRS → EXIT", boxX + 10, boxY + boxH - 6);
+        ctx.font = "7.5px monospace";
+        ctx.fillText(`MBON-app: ${{mbApp.toFixed(2)}}  ·  MBON-av: ${{mbAv.toFixed(2)}}`, barX, mbY + mbH - 6);
       }}
 
       // Dynamic Vm Readout Update

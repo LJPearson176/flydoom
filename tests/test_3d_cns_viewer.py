@@ -56,7 +56,13 @@ def test_compiled_3d_viewer_html():
     assert "onMatrixCellClick" in content
     assert "setLesionMode" in content
     assert "stage1_waypoints" in content
+    assert "stage2_waypoints" in content
     assert "STAGE 1 TOPOLOGICAL WAYPOINTS" in content
+    assert "STAGE 2 TOPOLOGICAL WAYPOINTS" in content
+    assert "setWaypointStage" in content
+    assert "btnStage1" in content
+    assert "btnStage2" in content
+    assert "MUSHROOM BODY VALENCE (V_MB)" in content
     assert "btnPresetFlyGun" in content
     assert "chkFlyShotgun" in content
     assert "drawEmbodiedFlyWithShotgun" in content
