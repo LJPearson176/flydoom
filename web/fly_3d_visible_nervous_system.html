@@ -437,6 +437,7 @@
   <header>
     <div class="title-group">
       <span class="badge">FULL 3D VISIBLE CNS TWIN</span>
+      <a href="joined_gameplay_3d_viewer.html" target="_blank" class="badge" style="background:rgba(0,255,170,0.15); border-color:#00ffaa; color:#00ffaa; text-decoration:none; cursor:pointer;" title="Open Synchronized 4-Perspective Matrix Viewer">🎬 4-PERSPECTIVE VIDEO MATRIX</a>
       <div>
         <div class="title-text">DROSOPHILA MELANOGASTER CONNECTOME & EXOSKELETON</div>
         <div class="subtitle-text">Official JFRC2 Template Brain Mesh · FlyWire Whole-Brain Connectome (Nature 2024)</div>
@@ -459,6 +460,7 @@
       <canvas id="renderCanvas"></canvas>
 
       <div class="cam-toolbar">
+        <button class="btn" id="btnPresetFlyGun" onclick="setPreset('fly_gun')" style="border-color:var(--amber); color:var(--amber);">🔫 FLY + SHOTGUN</button>
         <button class="btn" id="btnPresetFlyWire" onclick="setPreset('flywire')">FLYWIRE FRONTAL</button>
         <button class="btn" id="btnPresetFullFly" onclick="setPreset('full_fly')">FULL FLY 3D (LATERAL)</button>
         <button class="btn active" id="btnPresetIso" onclick="setPreset('iso')">ISOMETRIC 3D</button>
@@ -735,6 +737,18 @@
           <span>Show Neuropil Synaptic Nuclei</span>
           <input type="checkbox" id="chkPoints" checked onchange="state.showPoints = this.checked">
         </div>
+        <div class="layer-row" style="border-top:1px solid rgba(255,152,0,0.25); padding-top:6px; margin-top:6px;">
+          <span style="color:var(--amber); font-weight:700;">🔫 3D Fly & DOOM Shotgun</span>
+          <input type="checkbox" id="chkFlyShotgun" checked onchange="state.showFlyShotgun = this.checked">
+        </div>
+        <div class="layer-row">
+          <span>Tripod Gait Locomotion</span>
+          <input type="checkbox" id="chkGaitAnim" checked onchange="state.showGaitAnim = this.checked">
+        </div>
+        <div class="layer-row">
+          <span>Shotgun Recoil & Muzzle Flash</span>
+          <input type="checkbox" id="chkRecoilAnim" checked onchange="state.showRecoilAnim = this.checked">
+        </div>
       </div>
 
       <div class="section">
@@ -863,6 +877,14 @@
       showParticles: true,
       showPoints: true,
       autoRotate: false,
+
+      // 3D Embodied Fly & DOOM Shotgun (NeuroMechFly biomechanics)
+      showFlyShotgun: true,
+      showGaitAnim: true,
+      showRecoilAnim: true,
+      gunRecoil: 0.0,
+      gunFlash: 0.0,
+      doorReach: 0.0,
 
       // High-Fidelity Multi-Scale Granularity
       granularity: 1,
@@ -1004,7 +1026,19 @@
         if (b.id.startsWith("btnPreset")) b.classList.remove("active");
       });
 
-      if (p === "flywire") {
+      if (p === "fly_gun") {
+        state.yaw = -0.45;
+        state.pitch = 0.28;
+        state.dist = 880.0;
+        state.target = [0, -120, -20];
+        state.cuticleOpacity = 0.50;
+        state.showFlyShotgun = true;
+        document.getElementById("cuticleOpacitySlider").value = 50;
+        document.getElementById("lblCuticleOp").textContent = "50%";
+        const chk = document.getElementById("chkFlyShotgun");
+        if (chk) chk.checked = true;
+        document.getElementById("btnPresetFlyGun").classList.add("active");
+      } else if (p === "flywire") {
         state.yaw = 0.0;
         state.pitch = 0.0;
         state.dist = 560.0;
@@ -1715,6 +1749,390 @@
       rCtx.fillText("R", rw * 0.73, rh * 0.94);
     }
 
+    function drawEmbodiedFlyWithShotgun(ctx, w, h, asym, isFire, isDoor, isDamage) {
+      if (!state.showFlyShotgun) return;
+
+      // 1. Recoil & Stimulus Dynamics
+      if (isFire && state.showRecoilAnim) {
+        state.gunRecoil = Math.max(state.gunRecoil, 22.0);
+        state.gunFlash = 1.0;
+      } else {
+        state.gunRecoil = Math.max(0.0, state.gunRecoil * 0.72);
+        state.gunFlash = Math.max(0.0, state.gunFlash * 0.60);
+      }
+
+      if (isDoor) {
+        state.doorReach = Math.min(1.0, state.doorReach + 0.35);
+      } else {
+        state.doorReach = Math.max(0.0, state.doorReach * 0.70);
+      }
+
+      const recoilY = -state.gunRecoil;
+      const flashAlpha = state.gunFlash;
+      const reachOffset = state.doorReach * 65.0;
+
+      // Helper for 3D Polygon Drawing
+      function drawPoly3D(pts, fill, stroke, strokeW) {
+        const projs = pts.map(pt => project(pt[0], pt[1], pt[2], w, h));
+        if (projs.some(p => p === null)) return;
+        ctx.beginPath();
+        ctx.moveTo(projs[0].x, projs[0].y);
+        for (let i = 1; i < projs.length; i++) {
+          ctx.lineTo(projs[i].x, projs[i].y);
+        }
+        ctx.closePath();
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = (strokeW || 1.0) * projs[0].scale;
+          ctx.stroke();
+        }
+      }
+
+      // Helper for 3-Point Articulated Leg Segment
+      function drawLegJoints(pA, pB, pC, color, w1, w2) {
+        const pa = project(pA[0], pA[1], pA[2], w, h);
+        const pb = project(pB[0], pB[1], pB[2], w, h);
+        const pc = project(pC[0], pC[1], pC[2], w, h);
+        if (!pa || !pb || !pc) return;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = w1 * pa.scale;
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.stroke();
+
+        ctx.lineWidth = w2 * pb.scale;
+        ctx.beginPath();
+        ctx.moveTo(pb.x, pb.y);
+        ctx.lineTo(pc.x, pc.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#6d3e15";
+        ctx.beginPath();
+        ctx.arc(pb.x, pb.y, 3.2 * pb.scale, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = "#1e140d";
+        ctx.beginPath();
+        ctx.arc(pc.x, pc.y, 2.2 * pc.scale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // 2. Ground Shadow beneath fly body
+      drawPoly3D([
+        [-120, -100, -180],
+        [120, -100, -180],
+        [100, -560, -180],
+        [-100, -560, -180]
+      ], "rgba(3, 8, 12, 0.65)", null);
+
+      // 3. Middle and Hind Articulated Walking Legs (Tripod Locomotion)
+      const gaitSpeed = isDamage ? 5.5 : 3.8;
+      const gaitPhase = state.showGaitAnim ? ((particlePhase * gaitSpeed) % (2 * Math.PI)) : 0.0;
+      const isTripodASwing = (gaitPhase < Math.PI);
+      const strideL = 1.0 - 0.45 * Math.max(-1.0, Math.min(1.0, asym));
+      const strideR = 1.0 + 0.45 * Math.max(-1.0, Math.min(1.0, asym));
+
+      const legConfigs = [
+        { id: "L2", base: [-65, -220, -40], footD: [-190, -210, -180], swing: !isTripodASwing, phase: (gaitPhase + Math.PI) % (2 * Math.PI), stride: strideL },
+        { id: "R2", base: [65, -220, -40], footD: [190, -210, -180], swing: isTripodASwing, phase: gaitPhase, stride: strideR },
+        { id: "L3", base: [-60, -310, -35], footD: [-170, -460, -180], swing: isTripodASwing, phase: gaitPhase, stride: strideL },
+        { id: "R3", base: [60, -310, -35], footD: [170, -460, -180], swing: !isTripodASwing, phase: (gaitPhase + Math.PI) % (2 * Math.PI), stride: strideR },
+      ];
+
+      for (let leg of legConfigs) {
+        let footY = leg.footD[1];
+        let footZ = leg.footD[2];
+        if (state.showGaitAnim) {
+          if (leg.swing) {
+            const sw = leg.phase / Math.PI;
+            footZ += Math.sin(sw * Math.PI) * 42.0;
+            footY += Math.cos(sw * Math.PI + Math.PI) * (36.0 * leg.stride);
+          } else {
+            const st = (leg.phase - Math.PI) / Math.PI;
+            footY -= Math.cos(st * Math.PI + Math.PI) * (30.0 * leg.stride);
+          }
+        }
+        const kneeX = (leg.base[0] + leg.footD[0]) * 0.58 + (leg.base[0] > 0 ? 32 : -32);
+        const kneeY = (leg.base[1] + footY) * 0.52;
+        const kneeZ = (leg.base[2] + footZ) * 0.5 + (leg.swing ? 70.0 : 45.0);
+
+        const legCol = leg.swing ? "#d99a4e" : "#b47838";
+        drawLegJoints(leg.base, [kneeX, kneeY, kneeZ], [leg.footD[0], footY, footZ], legCol, 4.2, 3.2);
+      }
+
+      // 4. Segmented Tergite Abdomen (7 Segments with respiration curl)
+      const curl = isDamage ? 28.0 : (Math.sin(particlePhase * 2.0) * 7.0);
+      for (let s = 0; s < 7; s++) {
+        const segY = -330.0 - s * 44.0;
+        const segZ = -25.0 - s * 10.0 - curl * (s / 7.0);
+        const segRadiusX = Math.max(16.0, 52.0 - s * 5.5);
+        const segRadiusZ = Math.max(14.0, 42.0 - s * 4.5);
+        const p = project(0, segY, segZ, w, h);
+        if (!p) continue;
+
+        ctx.fillStyle = (s % 2 === 0) ? "rgba(180, 115, 45, 0.88)" : "rgba(145, 85, 30, 0.88)";
+        ctx.strokeStyle = "rgba(45, 25, 10, 0.95)";
+        ctx.lineWidth = 1.4 * p.scale;
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, segRadiusX * p.scale, segRadiusZ * p.scale, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // Dark posterior stripe band
+        const pStripe = project(0, segY - 14, segZ, w, h);
+        if (pStripe) {
+          ctx.fillStyle = "rgba(25, 15, 8, 0.85)";
+          ctx.beginPath();
+          ctx.ellipse(pStripe.x, pStripe.y, (segRadiusX - 4) * pStripe.scale, (segRadiusZ * 0.38) * pStripe.scale, 0, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+
+      // 5. Veined Translucent Wings with Combat Startle Flare
+      const wingFlare = (isFire || isDamage) ? 22.0 : 0.0;
+      const wingLift = (isFire || isDamage) ? 28.0 : 0.0;
+
+      const leftWingPts = [
+        [-45, -210, 80],
+        [-120 - wingFlare, -360, 95 + wingLift],
+        [-135 - wingFlare, -530, 90 + wingLift],
+        [-85 - wingFlare * 0.5, -600, 82 + wingLift],
+        [-40, -450, 78]
+      ];
+      const rightWingPts = [
+        [45, -210, 80],
+        [120 + wingFlare, -360, 95 + wingLift],
+        [135 + wingFlare, -530, 90 + wingLift],
+        [85 + wingFlare * 0.5, -600, 82 + wingLift],
+        [40, -450, 78]
+      ];
+
+      drawPoly3D(leftWingPts, "rgba(120, 220, 255, 0.28)", "rgba(80, 180, 220, 0.70)", 1.2);
+      drawPoly3D(rightWingPts, "rgba(120, 220, 255, 0.28)", "rgba(80, 180, 220, 0.70)", 1.2);
+
+      // Wing veins
+      const pWBaseL = project(-45, -210, 80, w, h);
+      const pWTipL = project(-110 - wingFlare, -550, 88 + wingLift, w, h);
+      if (pWBaseL && pWTipL) {
+        ctx.strokeStyle = "rgba(40, 120, 160, 0.65)";
+        ctx.lineWidth = 1.0 * pWBaseL.scale;
+        ctx.beginPath();
+        ctx.moveTo(pWBaseL.x, pWBaseL.y);
+        ctx.lineTo(pWTipL.x, pWTipL.y);
+        ctx.stroke();
+      }
+      const pWBaseR = project(45, -210, 80, w, h);
+      const pWTipR = project(110 + wingFlare, -550, 88 + wingLift, w, h);
+      if (pWBaseR && pWTipR) {
+        ctx.strokeStyle = "rgba(40, 120, 160, 0.65)";
+        ctx.lineWidth = 1.0 * pWBaseR.scale;
+        ctx.beginPath();
+        ctx.moveTo(pWBaseR.x, pWBaseR.y);
+        ctx.lineTo(pWTipR.x, pWTipR.y);
+        ctx.stroke();
+      }
+
+      // 6. Drosophila Head Capsule & Ruby Compound Eyes
+      const pHead = project(0, 5, 5, w, h);
+      if (pHead) {
+        ctx.fillStyle = "rgba(165, 100, 40, 0.92)";
+        ctx.strokeStyle = "rgba(70, 35, 10, 0.95)";
+        ctx.lineWidth = 1.5 * pHead.scale;
+        ctx.beginPath();
+        ctx.ellipse(pHead.x, pHead.y, 48 * pHead.scale, 38 * pHead.scale, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Ruby red faceted compound eyes
+      for (let eyeSide of [-1, 1]) {
+        const eyePos = [eyeSide * 135, 10, 30];
+        const pEye = project(eyePos[0], eyePos[1], eyePos[2], w, h);
+        if (!pEye) continue;
+
+        const eyeR = 36 * pEye.scale;
+        const grad = ctx.createRadialGradient(
+          pEye.x - eyeSide * 8 * pEye.scale, pEye.y - 8 * pEye.scale, 2 * pEye.scale,
+          pEye.x, pEye.y, eyeR
+        );
+        grad.addColorStop(0, "#ff3366");
+        grad.addColorStop(0.4, "#be123c");
+        grad.addColorStop(1, "#4c0519");
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(pEye.x, pEye.y, eyeR, eyeR * 0.92, eyeSide * 0.2, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 200, 220, 0.6)";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // Specular eye glare
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.beginPath();
+        ctx.arc(pEye.x - eyeSide * 10 * pEye.scale, pEye.y - 10 * pEye.scale, 4.5 * pEye.scale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // 7. Prothoracic Forelegs (T1) Holding DOOM Shotgun
+      // Left T1 wraps pump fore-end
+      const l1Base = [-45, -140, -30];
+      const l1Grip = [-22, -20 + recoilY, -18];
+      const l1Knee = [-72, -75 + recoilY * 0.5, 12];
+      drawLegJoints(l1Base, l1Knee, l1Grip, "#c88c46", 4.2, 3.2);
+
+      // Right T1 cradles trigger guard OR extends forward on door interaction
+      const r1Base = [45, -140, -30];
+      let r1Grip, r1Knee;
+      if (state.doorReach > 0.05) {
+        r1Grip = [20, 110 + reachOffset, 5];
+        r1Knee = [60, 10 + reachOffset * 0.5, 32];
+      } else {
+        r1Grip = [16, -85 + recoilY, -34];
+        r1Knee = [62, -105 + recoilY * 0.6, 5];
+      }
+      drawLegJoints(r1Base, r1Knee, r1Grip, "#c88c46", 4.2, 3.2);
+
+      // 8. DOOM Double-Barrel Shotgun 3D Rendering
+      // (a) Walnut Stock
+      drawPoly3D([
+        [-8, -155 + recoilY, -42],
+        [8, -155 + recoilY, -42],
+        [10, -105 + recoilY, -32],
+        [-10, -105 + recoilY, -32]
+      ], "#5a2d12", "#3a1a08", 1.2);
+
+      // (b) Gunmetal Receiver
+      drawPoly3D([
+        [-12, -105 + recoilY, -34],
+        [12, -105 + recoilY, -34],
+        [12, -45 + recoilY, -26],
+        [-12, -45 + recoilY, -26]
+      ], "#1e293b", "#0f172a", 1.4);
+
+      // Trigger Guard
+      const pTrig = project(10, -85 + recoilY, -36, w, h);
+      if (pTrig) {
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.8 * pTrig.scale;
+        ctx.beginPath();
+        ctx.arc(pTrig.x, pTrig.y, 6 * pTrig.scale, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      // (c) Ribbed Walnut Pump Fore-End
+      drawPoly3D([
+        [-14, -45 + recoilY, -26],
+        [14, -45 + recoilY, -26],
+        [14, 0 + recoilY, -20],
+        [-14, 0 + recoilY, -20]
+      ], "#783c19", "#451a03", 1.4);
+
+      for (let r = 0; r < 5; r++) {
+        const ry = -40.0 + r * 8.0 + recoilY;
+        const pr1 = project(-13, ry, -25, w, h);
+        const pr2 = project(13, ry, -25, w, h);
+        if (pr1 && pr2) {
+          ctx.strokeStyle = "#381403";
+          ctx.lineWidth = 1.6 * pr1.scale;
+          ctx.beginPath();
+          ctx.moveTo(pr1.x, pr1.y);
+          ctx.lineTo(pr2.x, pr2.y);
+          ctx.stroke();
+        }
+      }
+
+      // (d) Twin Steel Barrels
+      drawPoly3D([
+        [-9, 0 + recoilY, -19],
+        [-1, 0 + recoilY, -19],
+        [-1, 138 + recoilY, -9],
+        [-9, 138 + recoilY, -9]
+      ], "#334155", "#0f172a", 1.2);
+
+      drawPoly3D([
+        [1, 0 + recoilY, -19],
+        [9, 0 + recoilY, -19],
+        [9, 138 + recoilY, -9],
+        [1, 138 + recoilY, -9]
+      ], "#475569", "#1e293b", 1.2);
+
+      // Muzzle openings
+      const pMuzL = project(-5, 139 + recoilY, -9, w, h);
+      const pMuzR = project(5, 139 + recoilY, -9, w, h);
+      if (pMuzL) {
+        ctx.fillStyle = "#020617";
+        ctx.beginPath();
+        ctx.arc(pMuzL.x, pMuzL.y, 3.2 * pMuzL.scale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      if (pMuzR) {
+        ctx.fillStyle = "#020617";
+        ctx.beginPath();
+        ctx.arc(pMuzR.x, pMuzR.y, 3.2 * pMuzR.scale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // Brass bead front sight
+      const pSight = project(0, 136 + recoilY, -4, w, h);
+      if (pSight) {
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(pSight.x, pSight.y, 2.4 * pSight.scale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // 9. Explosive Firing Muzzle Flash & Ejected Spent Cartridge
+      if (flashAlpha > 0.05) {
+        const pFlash = project(0, 145 + recoilY, -8, w, h);
+        if (pFlash) {
+          // Outer bloom halo
+          const flashR = (38.0 + 16.0 * Math.random()) * flashAlpha * pFlash.scale;
+          const fGrad = ctx.createRadialGradient(pFlash.x, pFlash.y, 2 * pFlash.scale, pFlash.x, pFlash.y, flashR);
+          fGrad.addColorStop(0, "rgba(255, 255, 255, " + (0.95 * flashAlpha) + ")");
+          fGrad.addColorStop(0.3, "rgba(255, 200, 0, " + (0.85 * flashAlpha) + ")");
+          fGrad.addColorStop(0.7, "rgba(255, 80, 0, " + (0.55 * flashAlpha) + ")");
+          fGrad.addColorStop(1, "rgba(255, 30, 0, 0)");
+          ctx.fillStyle = fGrad;
+          ctx.beginPath();
+          ctx.arc(pFlash.x, pFlash.y, flashR, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // Starburst rays
+          ctx.strokeStyle = "rgba(255, 240, 160, " + (0.9 * flashAlpha) + ")";
+          ctx.lineWidth = 2.0 * pFlash.scale;
+          const numRays = 10;
+          for (let r = 0; r < numRays; r++) {
+            const ang = (Math.PI * 2.0 / numRays) * r + particlePhase;
+            const len = (25.0 + ((r % 2 === 0) ? 22.0 : 10.0)) * flashAlpha * pFlash.scale;
+            ctx.beginPath();
+            ctx.moveTo(pFlash.x, pFlash.y);
+            ctx.lineTo(pFlash.x + Math.cos(ang) * len, pFlash.y + Math.sin(ang) * len);
+            ctx.stroke();
+          }
+        }
+
+        // Ejected brass shell tumbling rightward
+        const pShell = project(35 + (1.0 - flashAlpha) * 20.0, -70 + recoilY, 8 + (1.0 - flashAlpha) * 15.0, w, h);
+        if (pShell) {
+          ctx.save();
+          ctx.translate(pShell.x, pShell.y);
+          ctx.rotate((1.0 - flashAlpha) * 4.0);
+          ctx.fillStyle = "#eab308";
+          ctx.fillRect(-3 * pShell.scale, -6 * pShell.scale, 6 * pShell.scale, 12 * pShell.scale);
+          ctx.fillStyle = "#ef4444";
+          ctx.fillRect(-3 * pShell.scale, -6 * pShell.scale, 6 * pShell.scale, 3 * pShell.scale);
+          ctx.restore();
+        }
+      }
+    }
+
     let particlePhase = 0.0;
 
     function render() {
@@ -2159,7 +2577,12 @@
         ctx.globalAlpha = 1.0;
       }
 
-      // 10. Stage 1 Waypoint Trajectory Inset HUD (E1M1 Spawn to Exit)
+      // 10. Articulated 3D Drosophila Fly with DOOM Shotgun (NeuroMechFly Biomechanics)
+      if (state.showFlyShotgun) {
+        drawEmbodiedFlyWithShotgun(ctx, w, h, asym, isFire, isDoor, isDamage);
+      }
+
+      // 11. Stage 1 Waypoint Trajectory Inset HUD (E1M1 Spawn to Exit)
       if (state.showWaypoints && DATA.stage1_waypoints && DATA.stage1_waypoints.length > 0) {
         const wps = DATA.stage1_waypoints;
         const boxW = 210;

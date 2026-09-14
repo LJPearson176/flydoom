@@ -57,6 +57,11 @@ def test_compiled_3d_viewer_html():
     assert "setLesionMode" in content
     assert "stage1_waypoints" in content
     assert "STAGE 1 TOPOLOGICAL WAYPOINTS" in content
+    assert "btnPresetFlyGun" in content
+    assert "chkFlyShotgun" in content
+    assert "drawEmbodiedFlyWithShotgun" in content
+    assert "joined_gameplay_3d_viewer.html" in content
+    assert "3D Fly &amp; DOOM Shotgun" in content or "3D Fly & DOOM Shotgun" in content
 
 
 def test_observatory_index_integration():
