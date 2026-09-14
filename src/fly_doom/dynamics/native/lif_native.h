@@ -84,6 +84,29 @@ void lif_set_state(
     const int32_t* refractory_timer
 );
 
+// Low-level lazy exact subthreshold evolution kernel (fly_ocr)
+void neural_advance(
+    int n,
+    const int64_t* ptr,
+    const int32_t* post,
+    const float* weight,
+    float* v,
+    float* g,
+    int16_t* refractory,
+    const float* drive,
+    float* previous_drive,
+    int32_t* queue,
+    int32_t* queue_count,
+    int64_t* clock,
+    int steps,
+    float dt,
+    int32_t* counts,
+    int32_t* active,
+    uint8_t* flags,
+    int32_t* nactive,
+    int64_t* last
+);
+
 #ifdef __cplusplus
 }
 #endif

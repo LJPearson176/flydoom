@@ -28,13 +28,27 @@ class _NativeLIFParams(ctypes.Structure):
 
 def _find_native_lib() -> Path:
     current_dir = Path(__file__).parent
-    candidate = current_dir / "native" / "liblif_native.dylib"
-    if candidate.exists():
-        return candidate
-    candidate_so = current_dir / "native" / "liblif_native.so"
-    if candidate_so.exists():
-        return candidate_so
-    raise FileNotFoundError(f"Native LIF library not found in {current_dir / 'native'}")
+    native_dir = current_dir / "native"
+    target_ext = ".dylib" if os.uname().sysname == "Darwin" else ".so"
+    target = native_dir / f"liblif_native{target_ext}"
+    if target.exists():
+        return target
+
+    # Auto-compile if not present
+    import shutil
+    import subprocess
+    import sys
+    cpp_source = native_dir / "lif_native.cpp"
+    compiler = shutil.which("clang++") or shutil.which("g++")
+    if not compiler:
+        raise FileNotFoundError(f"Native LIF library not found in {native_dir} and no C++ compiler available")
+    cmd = [compiler, "-O3", "-std=c++20", "-shared", "-fPIC"]
+    if sys.platform == "darwin":
+        cmd.extend(["-undefined", "dynamic_lookup"])
+    cmd.extend([str(cpp_source), "-o", str(target)])
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    return target
+
 
 
 _LIB_PATH = _find_native_lib()
