@@ -811,17 +811,33 @@
 
       <div class="section">
         <div class="sec-title">
-          <span>COMPOUND-EYE FACET ATLAS</span>
-          <span style="font-size:9px; color:var(--cyan);">825 COLUMN FACETS</span>
+          <span>DUAL-CHANNEL OPTOMOTOR SENSORY DECODER</span>
+          <span style="font-size:9px; color:var(--cyan);">BIOPHYSICAL DUAL STREAM</span>
         </div>
         <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
-          Decoupled display geometry (fly_ocr). Curved left &amp; right compound eyes with 825 ommatidial column facets (300 L, 525 R) illuminated in real time by biophysical visual flow.
+          Dual-channel decomposition: Left Tessellation Mask (275 ommatidia, phosphor RF) vs. Right Polarization &amp; UV Channel with EMD Field (550 ommatidia, motion energy vectors).
         </div>
         <canvas id="retinaCanvas" width="300" height="120" style="width:100%; height:120px; background:#04090d; border:1px solid var(--border); border-radius:4px; display:block;"></canvas>
         <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); margin-top:5px;">
-          <span>LEFT EYE (300 COLS)</span>
-          <span id="lblSuperposition" style="color:var(--cyan);">NEURAL SUPERPOSITION</span>
-          <span>RIGHT EYE (525 COLS)</span>
+          <span style="color:var(--green); font-weight:700;">L: TESSELLATION / RF</span>
+          <span id="lblSuperposition" style="color:var(--cyan);">OPTO GAIN 1.42x</span>
+          <span style="color:var(--purple); font-weight:700;">R: POLAR-UV / EMD FIELD</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">
+          <span>HEADING &amp; ATTENTION TOPOLOGICAL MAP</span>
+          <span style="font-size:9px; color:var(--amber);">CENTRAL COMPLEX EB</span>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+          Allocentric contour-mapped attention field parameterized by Ellipsoid Body (EB) compass heading angle and circular coherence strength R.
+        </div>
+        <canvas id="headingMapCanvas" width="300" height="150" style="width:100%; height:150px; background:#04090d; border:1px solid var(--border); border-radius:4px; display:block;"></canvas>
+        <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); margin-top:5px;">
+          <span>EB COMPASS: <strong id="lblEbHeading" style="color:var(--cyan);">+15.8°</strong></span>
+          <span id="lblEbGain" style="color:var(--amber); font-weight:700;">▲ +15.8° GAIN</span>
+          <span>COHERENCE: <strong id="lblEbCoh" style="color:var(--green);">R = 0.67</strong></span>
         </div>
       </div>
 
@@ -1711,8 +1727,8 @@
 
       // Draw background ovals for Left & Right compound eyes
       const eyes = [
-        { side: "L", cx: rw * 0.25, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455 },
-        { side: "R", cx: rw * 0.75, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455 }
+        { side: "L", cx: rw * 0.25, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455, bg: "#0a1814", border: "#184535" },
+        { side: "R", cx: rw * 0.75, cy: rh * 0.48, rx: rw * 0.231, ry: rh * 0.455, bg: "#140c24", border: "#462266" }
       ];
 
       for (let i = 0; i < eyes.length; i++) {
@@ -1720,10 +1736,10 @@
         rCtx.save();
         rCtx.beginPath();
         rCtx.ellipse(e.cx, e.cy, e.rx, e.ry, 0, 0, Math.PI * 2);
-        rCtx.fillStyle = "#211822";
+        rCtx.fillStyle = e.bg;
         rCtx.fill();
-        rCtx.strokeStyle = "#78504b";
-        rCtx.lineWidth = 1;
+        rCtx.strokeStyle = e.border;
+        rCtx.lineWidth = 1.2;
         rCtx.stroke();
         rCtx.restore();
       }
@@ -1738,7 +1754,7 @@
         const cy = rh * 0.48 + f.y * rh * 0.404;
 
         // Base luminance + dynamic visual flow / combat modulation
-        let b = 0.22;
+        let b = 0.24;
         const drive = isLeft ? Math.max(0, -asym) : Math.max(0, asym);
         b += drive * 0.70;
 
@@ -1747,24 +1763,28 @@
         if (isDamage) b = Math.min(1.0, b + 0.6);
         b = Math.max(0.0, Math.min(1.0, b));
 
-        let cr, cg, cb;
+        let cr, cg, cb, strokeCol;
         if (isFire) {
-          cr = Math.round(255 * b);
-          cg = Math.round(60 * b);
-          cb = 0;
+          cr = Math.round(255 * b); cg = Math.round(60 * b); cb = 0;
+          strokeCol = "#661800";
         } else if (isDoor) {
-          cr = 0;
-          cg = Math.round(255 * b);
-          cb = Math.round(170 * b);
+          cr = 0; cg = Math.round(255 * b); cb = Math.round(170 * b);
+          strokeCol = "#004838";
         } else if (isDamage) {
-          cr = Math.round(255 * b);
-          cg = Math.round(23 * b);
-          cb = Math.round(68 * b);
+          cr = Math.round(255 * b); cg = Math.round(23 * b); cb = Math.round(68 * b);
+          strokeCol = "#60081c";
+        } else if (isLeft) {
+          // Channel 1: Low-Resolution Tessellation Mask with Phosphor Green Receptive Fields
+          cr = Math.round(18 + 110 * b);
+          cg = Math.round(170 + 85 * b);
+          cb = Math.round(100 + 75 * b);
+          strokeCol = "#062217";
         } else {
-          // Classic fly_ocr monotone copper luminance scale
-          cr = Math.round(45 + 210 * b);
-          cg = Math.round(24 + 191 * b);
-          cb = Math.round(28 + 147 * b);
+          // Channel 2: Polarization & UV Short-Wavelength Spectral Contrast
+          cr = Math.round(100 + 50 * b);
+          cg = Math.round(40 + 190 * b);
+          cb = Math.round(210 + 45 * b);
+          strokeCol = "#22083c";
         }
 
         // Draw regular hexagon
@@ -1779,13 +1799,194 @@
         rCtx.closePath();
         rCtx.fillStyle = `rgb(${cr},${cg},${cb})`;
         rCtx.fill();
+        rCtx.strokeStyle = strokeCol;
+        rCtx.lineWidth = 0.6;
+        rCtx.stroke();
+
+        // Left Eye: Concentric motion cue ring on active facets
+        if (isLeft && b > 0.42) {
+          rCtx.beginPath();
+          rCtx.arc(cx, cy, radius * 1.5, 0, Math.PI * 2);
+          rCtx.strokeStyle = `rgba(0, 255, 170, ${Math.min(0.7, (b - 0.4) * 1.5)})`;
+          rCtx.lineWidth = 0.8;
+          rCtx.stroke();
+        }
+
+        // Right Eye: Elementary Motion Detector (EMD) gradient vectors
+        if (!isLeft && (i % 4 === 0) && (Math.abs(asym) > 0.08 || b > 0.35)) {
+          const flowX = Math.sign(asym || 1) * (radius * 1.4);
+          const flowY = (f.y || 0) * (radius * 0.8);
+          rCtx.beginPath();
+          rCtx.moveTo(cx, cy);
+          rCtx.lineTo(cx + flowX, cy + flowY);
+          rCtx.strokeStyle = "#ffd166";
+          rCtx.lineWidth = 1.0;
+          rCtx.stroke();
+          // Arrowhead
+          rCtx.beginPath();
+          rCtx.arc(cx + flowX, cy + flowY, 1.2, 0, Math.PI * 2);
+          rCtx.fillStyle = "#ffd166";
+          rCtx.fill();
+        }
       }
 
-      // Anatomical hemisphere labels
-      rCtx.fillStyle = "#94acbc";
-      rCtx.font = "10px ui-monospace, monospace";
-      rCtx.fillText("L", rw * 0.23, rh * 0.94);
-      rCtx.fillText("R", rw * 0.73, rh * 0.94);
+      // Anatomical stream labels
+      rCtx.save();
+      rCtx.font = "bold 9px ui-monospace, monospace";
+      rCtx.fillStyle = "#00ffaa";
+      rCtx.fillText("L: TESSELLATION / RF", rw * 0.08, rh * 0.94);
+      rCtx.fillStyle = "#c084fc";
+      rCtx.fillText("R: POLAR-UV / EMD FIELD", rw * 0.54, rh * 0.94);
+      rCtx.restore();
+    }
+
+    function drawHeadingAttentionMap(asym) {
+      const hCanvas = document.getElementById("headingMapCanvas");
+      if (!hCanvas) return;
+      const hCtx = hCanvas.getContext("2d");
+      if (!hCtx) return;
+      const hw = hCanvas.width;
+      const hh = hCanvas.height;
+      hCtx.clearRect(0, 0, hw, hh);
+
+      // Allocentric heading derivation
+      const ebHeadingDeg = asym * 40.0 + 15.8;
+      const coh = Math.min(0.95, 0.67 + 0.18 * Math.abs(asym));
+
+      // Update text indicators
+      const elHead = document.getElementById("lblEbHeading");
+      const elGain = document.getElementById("lblEbGain");
+      const elCoh = document.getElementById("lblEbCoh");
+      if (elHead) elHead.textContent = (ebHeadingDeg >= 0 ? "+" : "") + ebHeadingDeg.toFixed(1) + "°";
+      if (elGain) elGain.textContent = "▲ " + (ebHeadingDeg >= 0 ? "+" : "") + ebHeadingDeg.toFixed(1) + "° GAIN";
+      if (elCoh) elCoh.textContent = "R = " + coh.toFixed(2);
+
+      // Background gradient
+      const bgGrad = hCtx.createRadialGradient(hw * 0.5, hh * 0.48, 10, hw * 0.5, hh * 0.48, hw * 0.48);
+      bgGrad.addColorStop(0, "#081622");
+      bgGrad.addColorStop(0.7, "#040b10");
+      bgGrad.addColorStop(1, "#020508");
+      hCtx.fillStyle = bgGrad;
+      hCtx.fillRect(0, 0, hw, hh);
+
+      // Compass ring
+      const cx = hw * 0.5;
+      const cy = hh * 0.46;
+      const maxR = Math.min(hw * 0.38, hh * 0.38);
+
+      hCtx.save();
+      hCtx.strokeStyle = "#122a36";
+      hCtx.lineWidth = 1;
+      hCtx.beginPath();
+      hCtx.arc(cx, cy, maxR, 0, Math.PI * 2);
+      hCtx.stroke();
+
+      // Cardinal axes
+      hCtx.beginPath();
+      hCtx.moveTo(cx - maxR, cy);
+      hCtx.lineTo(cx + maxR, cy);
+      hCtx.moveTo(cx, cy - maxR);
+      hCtx.lineTo(cx, cy + maxR);
+      hCtx.strokeStyle = "rgba(22, 50, 62, 0.6)";
+      hCtx.setLineDash([2, 3]);
+      hCtx.stroke();
+      hCtx.setLineDash([]);
+      hCtx.restore();
+
+      // Hotspot calculation
+      const rad = (ebHeadingDeg - 90) * (Math.PI / 180.0);
+      const hDist = maxR * 0.58 * coh;
+      const hx = cx + Math.cos(rad) * hDist;
+      const hy = cy + Math.sin(rad) * hDist;
+
+      // Multi-lobe continuous isocontours
+      const contourLevels = [
+        { r: maxR * 0.95, fill: "rgba(10, 30, 48, 0.25)", stroke: "#173b54", lw: 1.0 },
+        { r: maxR * 0.75, fill: "rgba(15, 55, 80, 0.35)", stroke: "#0088aa", lw: 1.0 },
+        { r: maxR * 0.55, fill: "rgba(0, 160, 140, 0.35)", stroke: "#00ffaa", lw: 1.2 },
+        { r: maxR * 0.38, fill: "rgba(180, 200, 40, 0.40)", stroke: "#ffd166", lw: 1.4 },
+        { r: maxR * 0.22, fill: "rgba(255, 120, 30, 0.55)", stroke: "#ff6b6b", lw: 1.5 },
+        { r: maxR * 0.10, fill: "rgba(255, 30, 70, 0.70)", stroke: "#ff1744", lw: 1.8 }
+      ];
+
+      for (let i = 0; i < contourLevels.length; i++) {
+        const lvl = contourLevels[i];
+        const shiftT = (i / (contourLevels.length - 1));
+        const px = cx + (hx - cx) * shiftT;
+        const py = cy + (hy - cy) * shiftT;
+        hCtx.save();
+        hCtx.beginPath();
+        hCtx.ellipse(px, py, lvl.r, lvl.r * 0.82, rad, 0, Math.PI * 2);
+        hCtx.fillStyle = lvl.fill;
+        hCtx.fill();
+        hCtx.strokeStyle = lvl.stroke;
+        hCtx.lineWidth = lvl.lw;
+        hCtx.stroke();
+        hCtx.restore();
+      }
+
+      // Heading vector ray
+      hCtx.save();
+      hCtx.beginPath();
+      hCtx.moveTo(cx, cy);
+      hCtx.lineTo(hx, hy);
+      hCtx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      hCtx.lineWidth = 1.2;
+      hCtx.stroke();
+
+      // Central Agent anchor dot (pink/magenta)
+      hCtx.beginPath();
+      hCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+      hCtx.fillStyle = "#ff007f";
+      hCtx.fill();
+      hCtx.strokeStyle = "#ffffff";
+      hCtx.lineWidth = 1.5;
+      hCtx.stroke();
+
+      // Outer pulse halo
+      hCtx.beginPath();
+      hCtx.arc(cx, cy, 7, 0, Math.PI * 2);
+      hCtx.strokeStyle = "rgba(255, 0, 127, 0.4)";
+      hCtx.lineWidth = 1;
+      hCtx.stroke();
+
+      // Hotspot target marker
+      hCtx.beginPath();
+      hCtx.arc(hx, hy, 3, 0, Math.PI * 2);
+      hCtx.fillStyle = "#ffd166";
+      hCtx.fill();
+      hCtx.restore();
+
+      // Pill badge (▲ +15.8° GAIN)
+      hCtx.save();
+      const badgeText = "▲ " + (ebHeadingDeg >= 0 ? "+" : "") + ebHeadingDeg.toFixed(1) + "° GAIN";
+      hCtx.font = "bold 9px ui-monospace, monospace";
+      const bW = hCtx.measureText(badgeText).width + 12;
+      const bX = hw - bW - 8;
+      const bY = 8;
+      hCtx.fillStyle = "#000000";
+      hCtx.beginPath();
+      hCtx.roundRect(bX, bY, bW, 16, 3);
+      hCtx.fill();
+      hCtx.strokeStyle = "#254252";
+      hCtx.lineWidth = 1;
+      hCtx.stroke();
+      hCtx.fillStyle = "#ffd166";
+      hCtx.fillText(badgeText, bX + 6, bY + 12);
+
+      // Bottom banner: HEADING & ATTENTION MAP
+      hCtx.fillStyle = "#081319";
+      hCtx.fillRect(0, hh - 18, hw, 18);
+      hCtx.strokeStyle = "#16323e";
+      hCtx.beginPath();
+      hCtx.moveTo(0, hh - 18);
+      hCtx.lineTo(hw, hh - 18);
+      hCtx.stroke();
+      hCtx.fillStyle = "#8aa8b8";
+      hCtx.font = "bold 9px ui-monospace, monospace";
+      hCtx.textAlign = "center";
+      hCtx.fillText("HEADING & ATTENTION MAP", hw * 0.5, hh - 6);
+      hCtx.restore();
     }
 
     function drawEmbodiedFlyWithShotgun(ctx, w, h, asym, isFire, isDoor, isDamage) {
@@ -2230,6 +2431,7 @@
       }
 
       drawCompoundEyeAtlas(asym, isFire, isDoor, isDamage);
+      drawHeadingAttentionMap(asym);
 
       particlePhase += 0.04;
 
