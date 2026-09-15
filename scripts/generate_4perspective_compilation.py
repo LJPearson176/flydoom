@@ -9,6 +9,7 @@ Stitches 4 synchronized perspectives:
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 import shutil
@@ -54,73 +55,100 @@ def generate_4perspective_compilation():
     retina_encoder = EncoderCalibratedRetina()
     attn_map_renderer = HeadingAttentionMapRenderer(width=244, height=215)
 
+    # Load authentic decoded gameplay telemetry
+    telemetry_file = Path("assets/decoded_gameplay_frames.json")
+    if not telemetry_file.exists():
+        telemetry_file = Path("runs/decoded_gameplay_frames.json")
+    decoded_frames = []
+    if telemetry_file.exists():
+        with open(telemetry_file) as f:
+            decoded_frames = json.load(f)
+        print(f"Loaded {len(decoded_frames)} authentic telemetry frames from {telemetry_file}")
+
     gif_frames = []
 
     for idx, fpath in enumerate(frame_files):
         step = idx
         raw_dual = Image.open(fpath)  # 1360 x 540 (left: 720 GZDoom, right: 640 3D Twin)
 
+        # Determine dynamic state for tick from authentic gameplay telemetry
+        if decoded_frames and step < len(decoded_frames):
+            frame_info = decoded_frames[step]
+            action = frame_info["action"]
+            hp = frame_info["hp"]
+            ammo = frame_info["ammo"]
+            kills = frame_info["kills"]
+            dmg = 0.0 if kills == 0 else (25.0 if kills == 1 else 50.0)
+            is_fire = (action == "FIRE")
+
+            # Door probability ramps only as agent approaches Door 151 (step 52..65) and spikes on USE (step 66)
+            if step < 52:
+                door_p = 0.05 + 0.10 * (step / 52.0)
+            elif step <= 65:
+                door_p = 0.20 + ((step - 52) / 13.0) * 0.76
+            elif step == 66:
+                door_p = 0.98
+            elif step <= 71:
+                door_p = 0.90 - ((step - 66) / 5.0) * 0.80
+            else:
+                door_p = 0.04
+
+            # Enemy & threat probabilities spike upon door opening and combat
+            if step < 66:
+                enemy_p = 0.05
+                threat_p = 0.08
+            elif step < 73:
+                enemy_p = 0.35 + (step - 66) * 0.08
+                threat_p = 0.30 + (step - 66) * 0.08
+            elif step <= 86:
+                enemy_p = 0.95
+                threat_p = 0.92
+            else:
+                enemy_p = 0.10
+                threat_p = 0.15
+
+            # Asymmetry follows authentic turning and combat
+            if "RIGHT" in action:
+                asym = +0.380
+            elif "LEFT" in action:
+                asym = -0.380
+            elif is_fire:
+                asym = +0.08 * math.sin(step * 1.5)
+            else:
+                asym = +0.02 * math.sin(step * 0.4)
+
+            eb_deg = 15.8 + asym * 12.0
+            coherence_r = 0.85 if is_fire or enemy_p > 0.8 else (0.67 + 0.08 * math.cos(step * 0.1))
+        else:
+            action = "FORWARD"
+            hp = 100
+            ammo = 50
+            kills = 0
+            dmg = 0.0
+            door_p = 0.10
+            enemy_p = 0.05
+            threat_p = 0.10
+            is_fire = False
+            asym = 0.0
+            eb_deg = 15.8
+            coherence_r = 0.67
+
         # 1. Quadrant 1 (Top-Left): Authentic GZDoom Gameplay (680x540)
         q1_raw = raw_dual.crop((0, 0, 720, 540))
         q1 = q1_raw.resize((680, 540), Image.Resampling.BILINEAR)
         q1_draw = ImageDraw.Draw(q1)
         q1_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
-        q1_draw.text((14, 10), f"Q1: FIRST-PERSON GZDOOM  ·  STEP {step:03d}  ·  E1M1", fill=(0, 229, 255))
-        q1_draw.rectangle([0, 0, 679, 539], outline=(0, 229, 255), width=2)
-
-        # Determine dynamic state for tick
-        if step < 26:
-            action = "FORWARD" if step % 6 != 0 else "TURN_RIGHT"
-            door_p = 0.15 + (step / 26.0) * 0.70
-            enemy_p = 0.05
-            threat_p = 0.10
-            is_fire = False
-            hp = 100
-            ammo = 50
-            kills = 0
-            dmg = 0.0
-            asym = 0.08 * math.sin(step * 0.4)
-            eb_deg = 15.8 + asym * 10.0
-            coherence_r = 0.67 + 0.10 * math.cos(step * 0.1)
-        elif step < 46:
-            action = "USE" if 32 <= step <= 38 else "FORWARD"
-            door_p = 0.96 if 30 <= step <= 40 else 0.45
-            enemy_p = 0.20 + (step - 26) * 0.02
-            threat_p = 0.35
-            is_fire = False
-            hp = 100
-            ammo = 50
-            kills = 0
-            dmg = 0.0
-            asym = -0.12 if step < 35 else 0.05
-            eb_deg = 15.8 + asym * 10.0
-            coherence_r = 0.67 + 0.15 * math.cos(step * 0.1)
-        elif step < 96:
-            is_fire = (step in (52, 53, 68, 69, 70, 84, 85))
-            action = "FIRE" if is_fire else ("TURN_RIGHT" if step % 4 == 0 else "FORWARD")
-            door_p = 0.08
-            enemy_p = 0.88 + 0.08 * math.sin(step * 0.3)
-            threat_p = 0.82 + 0.12 * math.cos(step * 0.2)
-            hp = 94 if step > 70 else 100
-            ammo = 46 if step > 84 else (48 if step > 68 else 50)
-            kills = 2 if step > 88 else (1 if step > 68 else 0)
-            dmg = 50.0 if kills == 2 else (25.0 if kills == 1 else 10.0)
-            asym = 0.38 * math.sin(step * 0.5)
-            eb_deg = 15.8 + asym * 10.0
-            coherence_r = 0.75 + 0.10 * math.cos(step * 0.1)
-        else:
-            action = "FORWARD" if step % 5 != 0 else "TURN_LEFT"
-            door_p = 0.12
-            enemy_p = 0.10
-            threat_p = 0.15
-            is_fire = False
-            hp = 88
-            ammo = 41
-            kills = 2
-            dmg = 50.0
-            asym = -0.18
-            eb_deg = 15.8 + asym * 10.0
-            coherence_r = 0.67 + 0.08 * math.cos(step * 0.1)
+        q1_draw.text((14, 10), f"Q1: FIRST-PERSON GZDOOM  ·  STEP {step:03d}  ·  {action}  ·  HP {hp}%", fill=(0, 229, 255))
+        
+        # Border color dynamically reflecting action
+        border_col = (0, 229, 255)
+        if action == "FIRE":
+            border_col = (255, 60, 40)
+        elif action == "USE":
+            border_col = (0, 255, 170)
+        elif "TURN" in action:
+            border_col = (255, 160, 0)
+        q1_draw.rectangle([0, 0, 679, 539], outline=border_col, width=2)
 
         # 2. Quadrant 2 (Top-Right): 3D Isometric CNS Twin (680x540)
         q2_raw = raw_dual.crop((720, 0, 1360, 540))  # 640 x 540

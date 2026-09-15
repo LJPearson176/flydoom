@@ -1,0 +1,842 @@
+[
+  {
+    "step": 0,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 1,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 2,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 3,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 4,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 5,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 6,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 7,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 8,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 9,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 10,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 11,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 12,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 13,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 14,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 15,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 16,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 17,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 18,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 19,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 20,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 21,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 22,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 23,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 24,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 25,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 26,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 27,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 28,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 29,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 30,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 31,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 32,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 33,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 34,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 35,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 36,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 37,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 38,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 39,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 40,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 41,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 42,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 43,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 44,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 45,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 46,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 47,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 48,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 49,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 50,
+    "action": "TURN_RIGHT",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 51,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 52,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 53,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 54,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 55,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 56,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 57,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 58,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 59,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 60,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 61,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 62,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 63,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 64,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 65,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 66,
+    "action": "USE",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 67,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 68,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 69,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 70,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 71,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 72,
+    "action": "FORWARD",
+    "ammo": 50,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 73,
+    "action": "FIRE",
+    "ammo": 49,
+    "kills": 0,
+    "hp": 100
+  },
+  {
+    "step": 74,
+    "action": "FIRE",
+    "ammo": 48,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 75,
+    "action": "FORWARD",
+    "ammo": 48,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 76,
+    "action": "FIRE",
+    "ammo": 47,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 77,
+    "action": "FIRE",
+    "ammo": 46,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 78,
+    "action": "FORWARD",
+    "ammo": 46,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 79,
+    "action": "FIRE",
+    "ammo": 45,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 80,
+    "action": "FIRE",
+    "ammo": 44,
+    "kills": 1,
+    "hp": 100
+  },
+  {
+    "step": 81,
+    "action": "FORWARD",
+    "ammo": 44,
+    "kills": 1,
+    "hp": 88
+  },
+  {
+    "step": 82,
+    "action": "TURN_LEFT",
+    "ammo": 44,
+    "kills": 1,
+    "hp": 88
+  },
+  {
+    "step": 83,
+    "action": "FIRE",
+    "ammo": 43,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 84,
+    "action": "FIRE",
+    "ammo": 42,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 85,
+    "action": "FIRE",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 86,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 87,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 88,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 89,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 90,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 91,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 92,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 93,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 94,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 95,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 96,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 97,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 98,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 99,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 100,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 101,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 102,
+    "action": "TURN_RIGHT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 103,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 104,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 105,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 106,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 107,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 108,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 109,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 110,
+    "action": "TURN_LEFT",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 111,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 112,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 113,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 114,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 115,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 116,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 117,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 118,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  },
+  {
+    "step": 119,
+    "action": "FORWARD",
+    "ammo": 41,
+    "kills": 2,
+    "hp": 88
+  }
+]
