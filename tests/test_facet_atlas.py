@@ -105,3 +105,37 @@ def test_facet_atlas_serialization():
     assert "x" in facet0
     assert "y" in facet0
     assert "indices" in facet0
+
+
+def test_facet_atlas_render_dual_channel_pil():
+    """Verify dual-channel decomposition renders left tessellation and right polarization-UV/EMD."""
+    atlas = CompoundEyeFacetAtlas()
+
+    img = Image.new("RGB", (320, 200), (5, 10, 14))
+    draw = ImageDraw.Draw(img)
+
+    test_signals = np.linspace(0.1, 0.9, 3335, dtype=np.float32)
+    atlas.render_dual_channel_pil(
+        draw,
+        x=5,
+        y=5,
+        w=310,
+        h=190,
+        values=test_signals,
+        asymmetry=0.25,
+        is_motion=True,
+    )
+
+    arr = np.array(img)
+    # Background is (5, 10, 14), facets should be rendered with distinct left/right palettes
+    assert np.any(arr != [5, 10, 14])
+
+    # Left hemisphere should contain green phosphor tones
+    left_crop = arr[:, :160, :]
+    assert np.any(left_crop[:, :, 1] > 100)  # green channel high
+
+    # Right hemisphere should contain violet/magenta tones
+    right_crop = arr[:, 160:, :]
+    assert np.any(right_crop[:, :, 0] > 100)  # red/magenta channel high
+    assert np.any(right_crop[:, :, 2] > 100)  # blue/UV channel high
+

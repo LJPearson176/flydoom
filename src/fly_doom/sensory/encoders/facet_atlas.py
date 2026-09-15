@@ -217,6 +217,104 @@ class CompoundEyeFacetAtlas:
         draw.text((x + int(w * 0.23), y + int(h * 0.85)), "L", fill=(148, 172, 188))
         draw.text((x + int(w * 0.73), y + int(h * 0.85)), "R", fill=(148, 172, 188))
 
+    def render_dual_channel_pil(
+        self,
+        draw: ImageDraw.Draw,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        values: Optional[np.ndarray] = None,
+        asymmetry: float = 0.0,
+        is_motion: bool = False,
+    ) -> None:
+        """Render Dual-Channel Sensory Decomposition:
+        - Left Hemisphere: Low-Resolution Tessellation Mask displaying raw discrete ommatidial
+          array with active spatial receptive fields and localized motion cues.
+        - Right Hemisphere: Polarization & UV Channel with EMD Field visualizing high-contrast
+          polarization/short-wavelength spectral channel overlaid with Elementary Motion Detector
+          (EMD) gradient vectors.
+        """
+        facet_values: Optional[np.ndarray] = None
+        if values is not None:
+            if len(values) == self.num_receptors:
+                facet_values = self.compute_facet_values(values)
+            elif len(values) == len(self.facets):
+                facet_values = np.asarray(values, dtype=np.float32)
+            else:
+                facet_values = np.resize(values, len(self.facets))
+
+        # 1. Background eye ovals (Left: Emerald-tinted, Right: Violet-tinted)
+        for side in ("L", "R"):
+            cx = x + w * (0.26 if side == "L" else 0.74)
+            cy = y + h * 0.44
+            rx = w * 0.220
+            ry = h * 0.360
+            fill_col = (18, 28, 22) if side == "L" else (28, 14, 38)
+            outl_col = (45, 120, 80) if side == "L" else (150, 50, 180)
+            draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=fill_col, outline=outl_col, width=1)
+
+        radius = max(1.8, min(w / 140.0, h / 66.0))
+
+        # 2. Left Hemisphere: Low-Resolution Tessellation Mask (Discrete array & RF cues)
+        for f in self.facets:
+            if f.eye != "L":
+                continue
+            cx = x + w * 0.26 + f.x * w * 0.195
+            cy = y + h * 0.44 + f.y * h * 0.320
+            b = float(facet_values[f.facet_id]) if facet_values is not None else 0.35
+            b = max(0.0, min(1.0, b))
+
+            # Active spatial receptive field illumination (phosphor green palette)
+            if b > 0.65:
+                col = (int(40 + 190 * b), 255, int(80 + 140 * b))
+            elif b > 0.35:
+                col = (int(20 + 80 * b), int(120 + 90 * b), int(40 + 60 * b))
+            else:
+                col = (15, int(40 + 40 * b), 25)
+
+            # Discrete ommatidial facet outline
+            draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=col, outline=(10, 35, 20), width=1)
+
+            # Localized motion cue markers for high-contrast receptive fields
+            if b > 0.72:
+                draw.ellipse(
+                    [cx - radius - 1.5, cy - radius - 1.5, cx + radius + 1.5, cy + radius + 1.5],
+                    outline=(0, 255, 180),
+                    width=1,
+                )
+
+        # 3. Right Hemisphere: Polarization & UV Channel with EMD Field
+        for f in self.facets:
+            if f.eye != "R":
+                continue
+            cx = x + w * 0.74 + f.x * w * 0.195
+            cy = y + h * 0.44 + f.y * h * 0.320
+            b = float(facet_values[f.facet_id]) if facet_values is not None else 0.35
+            b = max(0.0, min(1.0, b))
+
+            # High-contrast polarization & short-wavelength UV palette (violet -> magenta -> UV cyan)
+            if b > 0.70:
+                col = (255, int(80 + 150 * b), 255)
+            elif b > 0.40:
+                col = (int(160 + 90 * b), int(20 + 60 * b), int(180 + 75 * b))
+            else:
+                col = (int(35 + 60 * b), int(10 + 25 * b), int(65 + 75 * b))
+
+            draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=col, outline=(45, 15, 60), width=1)
+
+            # Overlaid Elementary Motion Detector (EMD) gradient vectors
+            if b > 0.45 and f.facet_id % 3 == 0:
+                dx = f.x * 7.5 - asymmetry * 8.0
+                dy = f.y * 6.0
+                draw.line([(cx, cy), (cx + dx, cy + dy)], fill=(255, 235, 60), width=1)
+                draw.ellipse([cx + dx - 1, cy + dy - 1, cx + dx + 1, cy + dy + 1], fill=(255, 255, 180))
+
+        # 4. Descriptive Subtitles below ovals
+        draw.text((x + int(w * 0.26 - 62), y + int(h * 0.86)), "L: TESSELLATION / RF", fill=(0, 255, 170))
+        draw.text((x + int(w * 0.74 - 66), y + int(h * 0.86)), "R: POLAR-UV / EMD FIELD", fill=(240, 140, 255))
+
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize display atlas for web client JSON payload."""
         return {

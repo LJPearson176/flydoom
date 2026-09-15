@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 from fly_doom.sensory.encoders.facet_atlas import CompoundEyeFacetAtlas
 from fly_doom.sensory.encoders.calibrated_retina import EncoderCalibratedRetina, sample_retina
 from fly_doom.vis.fly_gun_renderer import FlyShotgunRenderer
+from fly_doom.vis.heading_attention_map import HeadingAttentionMapRenderer
 
 
 def generate_4perspective_compilation():
@@ -51,6 +52,7 @@ def generate_4perspective_compilation():
     fly_renderer = FlyShotgunRenderer(width=680, height=540)
     atlas = CompoundEyeFacetAtlas()
     retina_encoder = EncoderCalibratedRetina()
+    attn_map_renderer = HeadingAttentionMapRenderer(width=310, height=265)
 
     gif_frames = []
 
@@ -66,14 +68,6 @@ def generate_4perspective_compilation():
         q1_draw.text((14, 10), f"Q1: FIRST-PERSON GZDOOM  ·  STEP {step:03d}  ·  E1M1", fill=(0, 229, 255))
         q1_draw.rectangle([0, 0, 679, 539], outline=(0, 229, 255), width=2)
 
-        # 2. Quadrant 2 (Top-Right): 3D Isometric CNS Twin (680x540)
-        q2_raw = raw_dual.crop((720, 0, 1360, 540))
-        q2 = q2_raw.resize((680, 540), Image.Resampling.BILINEAR)
-        q2_draw = ImageDraw.Draw(q2)
-        q2_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
-        q2_draw.text((14, 10), f"Q2: 3D CONNECTOME TWIN  ·  3,030 FIBERS  ·  825 COLS", fill=(0, 229, 255))
-        q2_draw.rectangle([0, 0, 679, 539], outline=(0, 229, 255), width=2)
-
         # Determine dynamic state for tick
         if step < 26:
             action = "FORWARD" if step % 6 != 0 else "TURN_RIGHT"
@@ -86,6 +80,8 @@ def generate_4perspective_compilation():
             kills = 0
             dmg = 0.0
             asym = 0.08 * math.sin(step * 0.4)
+            eb_deg = 15.8 + asym * 10.0
+            coherence_r = 0.67 + 0.10 * math.cos(step * 0.1)
         elif step < 46:
             action = "USE" if 32 <= step <= 38 else "FORWARD"
             door_p = 0.96 if 30 <= step <= 40 else 0.45
@@ -97,6 +93,8 @@ def generate_4perspective_compilation():
             kills = 0
             dmg = 0.0
             asym = -0.12 if step < 35 else 0.05
+            eb_deg = 15.8 + asym * 10.0
+            coherence_r = 0.67 + 0.15 * math.cos(step * 0.1)
         elif step < 96:
             is_fire = (step in (52, 53, 68, 69, 70, 84, 85))
             action = "FIRE" if is_fire else ("TURN_RIGHT" if step % 4 == 0 else "FORWARD")
@@ -108,6 +106,8 @@ def generate_4perspective_compilation():
             kills = 2 if step > 88 else (1 if step > 68 else 0)
             dmg = 50.0 if kills == 2 else (25.0 if kills == 1 else 10.0)
             asym = 0.38 * math.sin(step * 0.5)
+            eb_deg = 15.8 + asym * 10.0
+            coherence_r = 0.75 + 0.10 * math.cos(step * 0.1)
         else:
             action = "FORWARD" if step % 5 != 0 else "TURN_LEFT"
             door_p = 0.12
@@ -119,6 +119,47 @@ def generate_4perspective_compilation():
             kills = 2
             dmg = 50.0
             asym = -0.18
+            eb_deg = 15.8 + asym * 10.0
+            coherence_r = 0.67 + 0.08 * math.cos(step * 0.1)
+
+        # 2. Quadrant 2 (Top-Right): 3D Isometric CNS Twin (680x540)
+        q2_raw = raw_dual.crop((720, 0, 1360, 540))
+        q2 = q2_raw.resize((680, 540), Image.Resampling.BILINEAR)
+        q2_draw = ImageDraw.Draw(q2)
+        q2_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
+        q2_draw.text((14, 10), f"Q2: 3D CONNECTOME TWIN  ·  3,030 FIBERS  ·  825 COLS", fill=(0, 229, 255))
+
+        # Heading & Attention Topological Map in right-hand section of Q2
+        attn_img = attn_map_renderer.render(
+            eb_heading_deg=eb_deg,
+            coherence_r=coherence_r,
+            asymmetry=asym,
+        )
+        q2.paste(attn_img, (356, 150))
+
+        # 3D Connectome label badge
+        q2_draw.rectangle([70, 392, 270, 418], fill=(8, 18, 24), outline=(22, 50, 62))
+        q2_draw.text((115, 399), "3D CONNECTOME", fill=(0, 229, 255))
+
+        # Authentic telemetry readout bar at bottom of Q2
+        q2_draw.rectangle([14, 426, 666, 524], fill=(8, 18, 24), outline=(22, 50, 62))
+        q2_draw.text(
+            (22, 434),
+            f"ASYMMETRY: {asym:+.3f} (Div: 0.00 Curl: +0.00)     EB COMPASS: {eb_deg:+.1f}° (R={coherence_r:.2f})     LOCK SCAN",
+            fill=(0, 255, 170) if abs(asym) < 0.15 else (255, 160, 0),
+        )
+        q2_draw.text(
+            (22, 458),
+            "T4 ARBORS: L [Lead 0.00 Cent 0.17 Trail 0.54] R [Lead 0.00 Cent 0.14 Trail 0.51]",
+            fill=(120, 153, 169),
+        )
+        mb_val = -0.25 if hp < 95 else (+0.45 if kills > 0 else 0.01)
+        q2_draw.text(
+            (22, 482),
+            f"MOTOR FORWARD · FB STEER {asym:+.2f} · SEZ HAZARD: CLEAR · MB VALENCE: {mb_val:+.2f}",
+            fill=(0, 229, 255),
+        )
+        q2_draw.rectangle([0, 0, 679, 539], outline=(0, 229, 255), width=2)
 
         # 3. Quadrant 3 (Bottom-Left): 3D Anatomical Fly with Shotgun (680x540)
         q3 = fly_renderer.render_frame(
@@ -135,11 +176,11 @@ def generate_4perspective_compilation():
         q3_draw.text((14, 10), "Q3: 3D EMBODIED INSECT  ·  TRIPOD GAIT  ·  SHOTGUN", fill=(0, 229, 255))
         q3_draw.rectangle([0, 0, 679, 539], outline=(0, 229, 255), width=2)
 
-        # 4. Quadrant 4 (Bottom-Right): Telemetry & Reservoir Readouts (680x540)
+        # 4. Quadrant 4 (Bottom-Right): Dual-Channel Biophysical Optomotor Sensory Decoder (680x540)
         q4 = Image.new("RGB", (680, 540), (5, 10, 14))
         q4_draw = ImageDraw.Draw(q4)
         q4_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
-        q4_draw.text((14, 10), "Q4: CONNECTOME RESERVOIR READOUTS & TELEMETRY", fill=(0, 229, 255))
+        q4_draw.text((14, 10), "Q4: DUAL-CHANNEL BIOPHYSICAL OPTOMOTOR SENSORY DECODER", fill=(0, 229, 255))
 
         # Panel A: Reservoir Decoders
         q4_draw.rectangle([14, 48, 330, 260], fill=(9, 20, 27), outline=(22, 50, 62))
@@ -168,20 +209,21 @@ def generate_4perspective_compilation():
         q4_draw.rectangle([22, 208, 320, 244], fill=status_box_col, outline=status_txt_col, width=1)
         q4_draw.text((32, 218), f"STATE: {action} · LOCK-ON <=18°", fill=status_txt_col)
 
-        # Panel B: Two-Eye Compound-Eye Facet Atlas
+        # Panel B: Dual-Channel Sensory Decomposition
         gray_frame = np.mean(np.array(q1_raw), axis=2).astype(np.float32)
         samples = sample_retina(gray_frame, retina_encoder.calibrated_uv)
         q4_draw.rectangle([342, 48, 666, 260], fill=(9, 20, 27), outline=(22, 50, 62))
         q4_draw.rectangle([342, 48, 666, 72], fill=(12, 28, 38))
-        q4_draw.text((350, 53), "COMPOUND-EYE ATLAS (825)", fill=(0, 229, 255))
-        atlas.render_pil(
+        q4_draw.text((350, 53), "DUAL-CHANNEL SENSORY DECOMPOSITION (825)", fill=(0, 229, 255))
+        atlas.render_dual_channel_pil(
             draw=q4_draw,
             x=348,
-            y=78,
+            y=76,
             w=310,
-            h=174,
+            h=176,
             values=samples,
-            mode="amber_cyan",
+            asymmetry=asym,
+            is_motion=(action != "STOP"),
         )
 
         # Panel C: Biophysical Circuit & GZDoom Telemetry
@@ -196,12 +238,15 @@ def generate_4perspective_compilation():
         q4_draw.text((28, 344), f"Norm Asymmetry:  {asym:+.3f}", fill=(0, 255, 170))
         q4_draw.text((28, 362), "Kernel: Lazy C++ LIF (146.9 FPS)", fill=(0, 229, 255))
         q4_draw.text((28, 380), "Synapses: 25,582,938 Exact", fill=(120, 153, 169))
+        emd_yaw = asym * 0.42
+        q4_draw.text((28, 398), f"EMD Optomotor Drive: Yaw {emd_yaw:+.2f} rad/s", fill=(240, 140, 255))
 
         q4_draw.text((350, 308), f"Player Health: {hp:.0f}%", fill=(0, 255, 170) if hp > 70 else (255, 100, 100))
         q4_draw.text((350, 326), f"Shotgun Ammo:  {ammo} Shells", fill=(226, 241, 248))
         q4_draw.text((350, 344), f"Kills / Damage: {kills} PK / {dmg:.0f} Dmg", fill=(240, 166, 90))
         q4_draw.text((350, 362), "Tripod Gait: Alternating Triplets", fill=(0, 229, 255))
         q4_draw.text((350, 380), "Recoil Absorption: T1 Forelegs", fill=(0, 255, 170))
+        q4_draw.text((350, 398), "Photoreceptor DRA UV / Pol: Active", fill=(0, 229, 255))
 
         # Bottom Sub-ticker in Q4
         q4_draw.rectangle([0, 504, 680, 540], fill=(6, 14, 19))
