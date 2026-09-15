@@ -52,7 +52,7 @@ def generate_4perspective_compilation():
     fly_renderer = FlyShotgunRenderer(width=680, height=540)
     atlas = CompoundEyeFacetAtlas()
     retina_encoder = EncoderCalibratedRetina()
-    attn_map_renderer = HeadingAttentionMapRenderer(width=310, height=265)
+    attn_map_renderer = HeadingAttentionMapRenderer(width=244, height=215)
 
     gif_frames = []
 
@@ -123,23 +123,44 @@ def generate_4perspective_compilation():
             coherence_r = 0.67 + 0.08 * math.cos(step * 0.1)
 
         # 2. Quadrant 2 (Top-Right): 3D Isometric CNS Twin (680x540)
-        q2_raw = raw_dual.crop((720, 0, 1360, 540))
-        q2 = q2_raw.resize((680, 540), Image.Resampling.BILINEAR)
-        q2_draw = ImageDraw.Draw(q2)
-        q2_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
-        q2_draw.text((14, 10), f"Q2: 3D CONNECTOME TWIN  ·  3,030 FIBERS  ·  825 COLS", fill=(0, 229, 255))
+        q2_raw = raw_dual.crop((720, 0, 1360, 540))  # 640 x 540
+        q2 = Image.new("RGB", (680, 540), (5, 10, 14))
 
-        # Heading & Attention Topological Map in right-hand section of Q2
+        # Extract and scale Compound Eye Atlas into top right
+        atlas_crop = q2_raw.crop((403, 44, 629, 149))  # 226 x 105
+        atlas_scaled = atlas_crop.resize((244, 108), Image.Resampling.LANCZOS)
+        q2.paste(atlas_scaled, (420, 42))
+
+        # Shift nervous system left and scale down slightly (scale = 0.80)
+        cns_region = q2_raw.crop((0, 38, 640, 426))  # 640 x 388
+        cns_arr = np.array(cns_region)
+        cns_arr[0:115, 395:] = [5, 10, 14]  # zero out old atlas location
+        cns_clean = Image.fromarray(cns_arr)
+
+        scale_cns = 0.80
+        new_w = int(640 * scale_cns)  # 512
+        new_h = int(388 * scale_cns)  # 310
+        cns_scaled = cns_clean.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+        cns_canvas = Image.new("RGB", (680, 540), (5, 10, 14))
+        cns_canvas.paste(cns_scaled, (-55, 58))
+        q2 = Image.fromarray(np.maximum(np.array(q2), np.array(cns_canvas)))
+
+        # Heading & Attention Topological Map stacked cleanly below atlas (244x215)
         attn_img = attn_map_renderer.render(
             eb_heading_deg=eb_deg,
             coherence_r=coherence_r,
             asymmetry=asym,
         )
-        q2.paste(attn_img, (356, 150))
+        q2.paste(attn_img, (420, 156))
 
-        # 3D Connectome label badge
-        q2_draw.rectangle([70, 392, 270, 418], fill=(8, 18, 24), outline=(22, 50, 62))
-        q2_draw.text((115, 399), "3D CONNECTOME", fill=(0, 229, 255))
+        q2_draw = ImageDraw.Draw(q2)
+        q2_draw.rectangle([0, 0, 680, 36], fill=(8, 18, 24))
+        q2_draw.text((14, 10), f"Q2: 3D CONNECTOME TWIN  ·  3,030 FIBERS  ·  825 COLS", fill=(0, 229, 255))
+
+        # 3D Connectome label badge centered under shifted CNS
+        q2_draw.rectangle([60, 392, 250, 418], fill=(8, 18, 24), outline=(22, 50, 62))
+        q2_draw.text((100, 399), "3D CONNECTOME", fill=(0, 229, 255))
 
         # Authentic telemetry readout bar at bottom of Q2
         q2_draw.rectangle([14, 426, 666, 524], fill=(8, 18, 24), outline=(22, 50, 62))
