@@ -103,6 +103,11 @@ FlyDoom couples electron-microscopy-reconstructed neural circuitry with native 3
 
 FlyDoom features an end-to-end multimodal verification matrix rendered at 1360×1080 (12 FPS) that aligns first-person gameplay, central nervous system dynamics, whole-body biomechanics, and biophysical sensory decomposition tick-for-tick:
 
+![FlyDoom 4-Perspective Closed-Loop Gameplay](assets/quad_perspective_gameplay.gif)
+*Continuous closed-loop 4-Perspective compilation (680×540 animated GIF, 12 FPS, zero blind spots).*
+
+### Key Frame Synchronization Snapshots
+
 ![Step 066: Frame-Accurate Door Actuation](assets/quad_perspective_door_actuate.png)
 *Frame-accurate synchronization at Step 066 (Door 151 threshold): **Q1 (Top-Left)**: Native GZDoom with green border reflecting active `USE` command as the door ascends; **Q2 (Top-Right)**: 3D connectome twin shifted left with $\ge 65\text{ px}$ separation from the Heading & Attention Topological Map (`▲ +16.0° GAIN`); **Q3 (Bottom-Left)**: 3D anatomical fly facing UP with right foreleg reaching forward to actuate the switch; **Q4 (Bottom-Right)**: Dual-channel decoder indicating `DOOR P(USE): 0.98` and `STATE: USE`.*
 
